@@ -1,6 +1,7 @@
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import type Lenis from 'lenis'
+import { TEMPO } from './tempo'
 
 interface IntroOptions {
   lenis: Lenis | null
@@ -45,15 +46,15 @@ export function setupIntro({ lenis, reduced, hero }: IntroOptions) {
 
   if (!reduced) {
     // Arrival: the envelope settles onto the table.
-    gsap.from('.envelope-wrap', { y: 18, autoAlpha: 0, duration: 0.8, ease: 'emilOut' })
+    gsap.from('.envelope-wrap', { y: 18, autoAlpha: 0, duration: 0.8 * TEMPO.opening, ease: 'emilOut' })
     gsap.from('.intro-copy > *', {
       y: 8,
       autoAlpha: 0,
       filter: 'blur(4px)',
-      duration: 0.6,
+      duration: 0.6 * TEMPO.opening,
       ease: 'emilOut',
-      stagger: 0.08,
-      delay: 0.25,
+      stagger: 0.08 * TEMPO.opening,
+      delay: 0.25 * TEMPO.opening,
       clearProps: 'filter',
     })
   }
@@ -109,11 +110,14 @@ export function setupIntro({ lenis, reduced, hero }: IntroOptions) {
       .to(flap, { rotateX: 180, duration: 0.6, ease: 'emilInOut' }, 0.14)
       .set(flap, { zIndex: 0 }, 0.44)
       .to('.envelope-wrap', { y: '7vh', duration: 0.7, ease: 'emilInOut', overwrite: 'auto' }, 0.4)
-      .to(letter, { yPercent: -54, duration: 0.6 }, 0.5)
-      .to(intro.querySelectorAll('.env-part'), { yPercent: 60, autoAlpha: 0, duration: 0.4 }, 0.98)
-      .to(letter, { scale: 1.1, autoAlpha: 0, filter: 'blur(8px)', duration: 0.5 }, 1.02)
-      .to(['.intro-bg', '.intro .petals'], { autoAlpha: 0, duration: 0.55 }, 0.98)
-      .add(hero(), 0.85)
-      .call(finish, [], 1.55)
+      .to(letter, { yPercent: -54, duration: 0.7 }, 0.5)
+      // hold the card a beat so "The wedding of…" can be read before it dissolves
+      .to(intro.querySelectorAll('.env-part'), { yPercent: 60, autoAlpha: 0, duration: 0.5 }, 1.45)
+      .to(letter, { scale: 1.1, autoAlpha: 0, filter: 'blur(8px)', duration: 0.6 }, 1.5)
+      .to(['.intro-bg', '.intro .petals'], { autoAlpha: 0, duration: 0.65 }, 1.45)
+      .add(hero(), 1.35)
+      .call(finish, [], 2.1)
+      // everything above is written at brisk speed; TEMPO.opening sets the real pace
+      .timeScale(1 / TEMPO.opening)
   }
 }
