@@ -110,6 +110,7 @@ function timeline(reduced: boolean) {
   const svg = $<SVGSVGElement>('.vine', wrap)!
   const items = $$('.t-item', wrap)
   let grow: SVGPathElement | null = null
+  let growTo: ((v: number) => void) | null = null
   let leaves: SVGElement[] = []
   let marks: number[] = []
 
@@ -126,6 +127,7 @@ function timeline(reduced: boolean) {
     svg.style.height = `${h}px`
     svg.innerHTML = `<path class="vine-base" d="${d}"/><path class="vine-grow" pathLength="1" d="${d}"/>${ls}`
     grow = svg.querySelector('.vine-grow')
+    growTo = grow && !reduced ? gsap.quickTo(grow, 'strokeDashoffset', { duration: 0.35, ease: 'power3.out' }) : null
     leaves = [...svg.querySelectorAll<SVGElement>('.vleaf')]
     marks = items.map((it) => (it.offsetTop + 19) / h)
   }
@@ -135,7 +137,8 @@ function timeline(reduced: boolean) {
   }
 
   const update = (p: number) => {
-    if (grow) grow.style.strokeDashoffset = String(1 - p)
+    if (growTo) growTo(1 - p)
+    else if (grow) grow.style.strokeDashoffset = String(1 - p)
     leaves.forEach((l) => l.classList.toggle('on', p >= Number(l.dataset.t)))
     items.forEach((it, i) => {
       const on = p >= marks[i] - 0.01
@@ -252,13 +255,13 @@ function parallax() {
       ['.layer-front', 90],
     ]
     layers.forEach(([sel, y]) =>
-      gsap.to($(sel, svg), { y, ease: 'none', scrollTrigger: { trigger: section, start, end: 'bottom top', scrub: true } }),
+      gsap.to($(sel, svg), { y, ease: 'none', scrollTrigger: { trigger: section, start, end: 'bottom top', scrub: 0.4 } }),
     )
   })
   gsap.to('.hero-copy', {
     yPercent: -10,
     autoAlpha: 0.25,
     ease: 'none',
-    scrollTrigger: { trigger: '#hero', start: 'top top', end: 'bottom top', scrub: true },
+    scrollTrigger: { trigger: '#hero', start: 'top top', end: 'bottom top', scrub: 0.4 },
   })
 }

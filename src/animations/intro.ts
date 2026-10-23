@@ -1,10 +1,8 @@
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import type Lenis from 'lenis'
 import { TEMPO } from './tempo'
 
 interface IntroOptions {
-  lenis: Lenis | null
   reduced: boolean
   hero: () => gsap.core.Timeline
 }
@@ -27,11 +25,44 @@ function crack(seal: HTMLElement) {
 }
 
 /**
+ * Never hold the guest hostage: once the opening is playing, a fresh scroll,
+ * swipe, tap or key press plays the rest quickly. Wheel momentum from the
+ * gesture that opened the envelope is ignored (it arrives without a pause).
+ */
+function hurryOnIntent(tl: gsap.core.Timeline, surface: HTMLElement) {
+  const started = performance.now()
+  let lastWheel = started
+  const settled = () => performance.now() - started > 400
+  const hurry = () => {
+    tl.timeScale(4)
+    stop()
+  }
+  const onWheel = () => {
+    const now = performance.now()
+    if (now - lastWheel > 250 && settled()) hurry()
+    lastWheel = now
+  }
+  const onTouch = () => settled() && hurry()
+  const onKey = (e: KeyboardEvent) => ['ArrowDown', 'PageDown', ' ', 'Enter', 'Escape'].includes(e.key) && hurry()
+  window.addEventListener('wheel', onWheel, { passive: true })
+  surface.addEventListener('touchstart', onTouch, { passive: true })
+  surface.addEventListener('mousedown', onTouch)
+  window.addEventListener('keydown', onKey)
+  function stop() {
+    window.removeEventListener('wheel', onWheel)
+    surface.removeEventListener('touchstart', onTouch)
+    surface.removeEventListener('mousedown', onTouch)
+    window.removeEventListener('keydown', onKey)
+  }
+  return stop
+}
+
+/**
  * The page stays locked behind the envelope until the guest either taps the
  * seal or tries to scroll (wheel, swipe up, arrow/space). Either one plays
- * the same ~1.5s opening, then hands scrolling back.
+ * the same opening, then hands native scrolling straight back.
  */
-export function setupIntro({ lenis, reduced, hero }: IntroOptions) {
+export function setupIntro({ reduced, hero }: IntroOptions) {
   const root = document.documentElement
   const intro = document.getElementById('intro')!
   const seal = document.getElementById('seal') as HTMLButtonElement
@@ -42,7 +73,6 @@ export function setupIntro({ lenis, reduced, hero }: IntroOptions) {
   const gutter = window.innerWidth - root.clientWidth
   root.classList.add('is-locked')
   if (gutter > 0) document.body.style.paddingRight = `${gutter}px`
-  lenis?.stop()
 
   if (!reduced) {
     // Arrival: the envelope settles onto the table.
@@ -61,6 +91,7 @@ export function setupIntro({ lenis, reduced, hero }: IntroOptions) {
 
   let opened = false
   let touchY = 0
+  let stopHurry = () => {}
   const onWheel = (e: WheelEvent) => e.deltaY > 2 && open()
   const onTouchStart = (e: TouchEvent) => (touchY = e.touches[0].clientY)
   const onTouchMove = (e: TouchEvent) => touchY - e.touches[0].clientY > 16 && open()
@@ -84,11 +115,11 @@ export function setupIntro({ lenis, reduced, hero }: IntroOptions) {
   }
 
   function finish() {
+    stopHurry()
     root.classList.remove('is-locked')
     document.body.style.paddingRight = ''
     root.classList.add('is-open')
     intro.hidden = true
-    lenis?.start()
     ScrollTrigger.refresh()
     document.querySelector<HTMLElement>('#hero h1')?.focus({ preventScroll: true })
   }
@@ -119,5 +150,6 @@ export function setupIntro({ lenis, reduced, hero }: IntroOptions) {
       .call(finish, [], 2.1)
       // everything above is written at brisk speed; TEMPO.opening sets the real pace
       .timeScale(1 / TEMPO.opening)
+    stopHurry = hurryOnIntent(tl, intro)
   }
 }

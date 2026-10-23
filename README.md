@@ -10,7 +10,6 @@ Live: https://garden-wedding-invitation.vercel.app
 
 - [Vite](https://vite.dev) + TypeScript (no UI framework)
 - [GSAP](https://gsap.com) + ScrollTrigger for the pinned envelope scene and scroll reveals
-- [Lenis](https://lenis.darkroom.engineering) for smooth scrolling
 - Hand-generated SVG botanicals (no image assets)
 
 ## Editing the invitation
@@ -68,4 +67,7 @@ Timings follow Emil Kowalski's design-engineering guidelines:
   `(hover: hover) and (pointer: fine)`.
 - Petals and swaying botanicals are CSS-only (transform + opacity) and pause
   when off screen.
-- `prefers-reduced-motion`: no movement or smooth scrolling, opacity fades only.
+- Native scrolling (no smooth-scroll library). The opening can always be cut
+  short: a fresh scroll, swipe, tap or key press plays the rest quickly.
+- Pacing lives in `src/animations/tempo.ts` (`opening` and `reveal`; higher = slower).
+- `prefers-reduced-motion`: no movement, opacity fades only.

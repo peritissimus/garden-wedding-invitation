@@ -1,6 +1,5 @@
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import Lenis from 'lenis'
 import './ease'
 import { heroTimeline, prepareHero } from './hero'
 import { setupIntro } from './intro'
@@ -22,19 +21,12 @@ export function setupAnimations() {
   if ('scrollRestoration' in history) history.scrollRestoration = 'manual'
   window.scrollTo(0, 0)
 
-  let lenis: Lenis | null = null
-  if (!reduced) {
-    lenis = new Lenis({ lerp: 0.12 })
-    const l = lenis
-    l.on('scroll', ScrollTrigger.update)
-    gsap.ticker.add((time) => l.raf(time * 1000))
-    gsap.ticker.lagSmoothing(0)
-    livePetals()
-  }
+  // Native scrolling: no smooth-scroll library re-timing the guest's own input.
+  if (!reduced) livePetals()
 
   prepareHero(reduced)
   setupSections(reduced)
-  setupIntro({ lenis, reduced, hero: () => heroTimeline(reduced) })
+  setupIntro({ reduced, hero: () => heroTimeline(reduced) })
 
   document.fonts?.ready.then(() => ScrollTrigger.refresh())
   if (import.meta.env.DEV) Object.assign(window, { gsap, ScrollTrigger })
