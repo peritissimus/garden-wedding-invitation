@@ -2,10 +2,14 @@
  * All invitation content lives here. Edit this file, then redeploy.
  * Times are local to the venue.
  */
+export type IconName = 'rings' | 'glasses' | 'dinner' | 'music' | 'sprig'
+
 export interface ScheduleItem {
   time: string // 24h "HH:MM"
   title: string
   note?: string
+  /** Optional; otherwise picked from the title (ceremony → rings, dinner → plate…). */
+  icon?: IconName
 }
 
 export interface WeddingConfig {
@@ -18,7 +22,7 @@ export interface WeddingConfig {
   message: string
   venue: { name: string; address: string; mapQuery?: string; note?: string }
   schedule: ScheduleItem[]
-  dressCode: { title: string; description: string; palette: string[] }
+  dressCode: { title: string; description: string; palette: { name: string; color: string }[] }
   rsvp: { email: string; deadline?: string; note?: string }
   closing: string
   /** Shows a small "sample" note in the footer until real details are in. */
@@ -48,7 +52,13 @@ export const config: WeddingConfig = {
   dressCode: {
     title: 'Garden formal',
     description: 'Soft, romantic colours welcome. Comfortable shoes for the lawn.',
-    palette: ['#e8cfc4', '#c9cfb7', '#ece3d2', '#b9c4cf', '#d9c2a0'],
+    palette: [
+      { name: 'Blush', color: '#e8cfc4' },
+      { name: 'Sage', color: '#c3cbb0' },
+      { name: 'Ivory', color: '#efe6d4' },
+      { name: 'Dusty blue', color: '#b7c3cf' },
+      { name: 'Champagne', color: '#dcc6a2' },
+    ],
   },
   rsvp: {
     email: '',

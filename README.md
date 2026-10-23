@@ -38,16 +38,34 @@ vercel deploy --prod --scope peritissimus-projects
 
 ```
 src/
-  config.ts        # all invitation content
-  render.ts        # page markup
-  animations.ts    # GSAP / ScrollTrigger / Lenis
-  main.ts          # entry: countdown, calendar, RSVP wiring
-  lib/
-    flora.ts       # deterministic SVG botanical generator
-    calendar.ts    # .ics download + Google Calendar link
-    format.ts      # date/time helpers
+  config.ts              # all invitation content
+  render.ts              # page markup
+  main.ts                # entry: countdown, calendar, RSVP wiring
+  art/                   # hand-built SVG artwork (no image files)
+    seal.ts              # wax seal that cracks in two
+    flora.ts             # eucalyptus / olive / gypsophila / rose corners
+    ornaments.ts         # wreath, flourish, glasshouse, icons, swatches, petals
+    defs.ts              # shared gradients + watercolour filters
+  animations/
+    ease.ts              # Emil Kowalski's custom curves (CustomEase)
+    intro.ts             # tap-or-scroll envelope opening
+    hero.ts              # ink-written names, botanicals growing in
+    sections.ts          # reveals, line drawings, timeline vine, count-up
+  lib/                   # date formatting, calendar export
   styles/main.css
 ```
 
-Respects `prefers-reduced-motion`: animations and smooth scrolling are
-disabled and all content is shown immediately.
+## Motion
+
+Timings follow Emil Kowalski's design-engineering guidelines:
+
+- Entrances use a strong ease-out (`cubic-bezier(.23, 1, .32, 1)`), movement on
+  screen uses a strong ease-in-out; no `ease-in` on UI.
+- Text reveals are 450–600ms with 18–60ms staggers and fire just before the
+  element is in view, so nothing waits on the reader.
+- Only the timeline vine is scroll-scrubbed; everything else plays once.
+- Buttons press to `scale(.97)`; hover effects are gated behind
+  `(hover: hover) and (pointer: fine)`.
+- Petals and swaying botanicals are CSS-only (transform + opacity) and pause
+  when off screen.
+- `prefers-reduced-motion`: no movement or smooth scrolling, opacity fades only.
