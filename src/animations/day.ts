@@ -316,9 +316,9 @@ export function setupDay(el: HTMLElement, reduced: boolean) {
     }
     if (t0 < 1) tl.to({}, { duration: 1 - t0 }, t0)
     tl.progress(progress)
-    // the light follows your scroll with a short ease-out catch-up (a little longer on touch,
-    // where a flick covers more ground) so it never snaps, yet stays tied to your finger
-    trigger = ScrollTrigger.create({ animation: tl, start: 0, end: 'max', scrub: reduced ? true : touch ? 1.2 : 0.9 })
+    // the light moves with your finger — no trailing catch-up. Touch scrolling is already
+    // smooth; a mouse wheel's notches get a quick 0.2s blend so the light doesn't step.
+    trigger = ScrollTrigger.create({ animation: tl, start: 0, end: 'max', scrub: reduced || touch ? true : 0.2 })
   }
   build()
   // The stage is sized to the large viewport, so a phone's toolbar sliding
@@ -342,8 +342,8 @@ export function setupDay(el: HTMLElement, reduced: boolean) {
       const depth = Number(el.dataset.depth)
       return {
         depth,
-        x: gsap.quickTo(el, 'x', { duration: 1.2, ease: 'power3.out' }),
-        y: gsap.quickTo(el, 'y', { duration: 1.2, ease: 'power3.out' }),
+        x: gsap.quickTo(el, 'x', { duration: 0.6, ease: 'power3.out' }),
+        y: gsap.quickTo(el, 'y', { duration: 0.6, ease: 'power3.out' }),
       }
     })
     addEventListener('pointermove', (e) => {

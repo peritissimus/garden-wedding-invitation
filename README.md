@@ -90,7 +90,8 @@ Timings follow Emil Kowalski's design-engineering guidelines:
   screens, where a flick outruns any fade, text and numbers are simply shown.
 - Only the garden's time of day is scroll-scrubbed. Each change of light eases
   in and out between two cards, so the garden is all but still while you read,
-  and it follows the scroll with a short ease-out catch-up rather than snapping.
+  and it moves with your finger — no trailing catch-up (a mouse wheel's notches
+  get a 0.2s blend).
 - The garden is painted once into canvases (at most 2× pixel density), so
   scrolling only moves and fades bitmaps — no repainting, even on phones.
 - Buttons press to `scale(.97)`; hover effects are gated behind
