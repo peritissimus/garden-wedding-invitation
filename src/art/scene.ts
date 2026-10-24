@@ -252,6 +252,14 @@ const HEDGE_TEX = `<pattern id="hedgeTex" width="14" height="12" patternUnits="u
 
 const BACK_STRAND = strand(250, 432, AX, 560, 1350, 432, 22, 0.1, 0.5)
 
+/** Flowering trees among the green: cherry pink and jacaranda lilac, shaded like the oaks. */
+const BLOSSOM = {
+  pink: ['#cf98a9', '#e2b0bf', '#efc9d3', '#fae0e6'],
+  lilac: ['#a596c2', '#baacd5', '#d0c4e5', '#e6ddf3'],
+}
+/** Treetops near the middle of the garden, filled while drawing the back layer, for the fairy lights strung through them at night. */
+const CANOPIES: { x: number; y: number; R: number }[] = []
+
 export function back(): Art {
   const r = rng(9)
   const tones = ['#4d6a48', '#62825a', '#789868', '#8fae79']
@@ -263,8 +271,18 @@ export function back(): Art {
     if (x > 1150 && x < 1330) continue // keep the glasshouse clear
     woods += oak(r, x, y + 18, 16 + r() * 14, hazy)
   }
-  // the treeline proper: oaks and poplars, smaller behind the mandap so it reads against the sky
+  // the treeline proper: oaks and poplars, smaller behind the mandap so it reads against the sky.
+  // A few flower: cherry pink and jacaranda lilac either side of the mandap and further out.
+  const d = rng(77) // details get their own sequence so the treeline itself never moves
+  const blossomAt: [number, number, keyof typeof BLOSSOM][] = [
+    [470, 640, 'pink'],
+    [960, 1130, 'lilac'],
+    [140, 320, 'lilac'],
+    [1280, 1460, 'pink'],
+  ]
   let trees = ''
+  let sprinkle = ''
+  CANOPIES.length = 0
   let x = -60
   while (x < 1680) {
     const behindArch = x > 640 && x < 960
@@ -273,8 +291,35 @@ export function back(): Art {
       x += 34 + r() * 24
     } else {
       const R0 = behindArch ? 34 + r() * 12 : 52 + r() * 40
-      trees += oak(r, x, 748, R0, tones)
+      const spot = behindArch ? -1 : blossomAt.findIndex(([a, b]) => x > a && x < b)
+      const kind = spot >= 0 ? blossomAt.splice(spot, 1)[0][2] : null
+      trees += oak(r, x, 748, R0, kind ? BLOSSOM[kind] : tones)
+      const cy = 748 - R0 * 1.22
+      // a fine sprinkle of open flowers, mostly on the sunlit upper right of the crown
+      if (kind)
+        for (let i = 0; i < R0 * 0.55; i++) {
+          const a = -Math.PI * (0.05 + d() * 0.9)
+          const q = 0.25 + Math.sqrt(d()) * 0.7
+          sprinkle += circle(x + Math.cos(a) * q * R0 * 0.8 + R0 * 0.08, cy + Math.sin(a) * q * R0 * 0.6, 0.6 + d() * 0.8)
+        }
+      if (x > 120 && x < 1480) CANOPIES.push({ x, y: cy, R: R0 })
       x += R0 * (1.1 + r() * 0.5)
+    }
+  }
+  // climbing roses scrambling over the hedges
+  const roses: Record<string, string> = { '#f2c4cc': '', '#fffaf4': '', '#e5aab6': '', '#f7e3c3': '' }
+  const tones4 = Object.keys(roses)
+  let briars = ''
+  for (const [x0, x1] of [
+    [-40, 652],
+    [948, 1640],
+  ]) {
+    for (let rx = x0 + 12; rx < x1 - 12; rx += 12 + d() * 24) {
+      const ry = 731 + d() * 34
+      for (let k = 0; k < 3; k++) briars += leafAt(rx + (d() - 0.5) * 14, ry + (d() - 0.5) * 8, 4 + d() * 3, 1.5, d() * Math.PI * 2)
+      const n = 2 + Math.floor(d() * 4)
+      const c = tones4[Math.floor(d() * tones4.length)]
+      for (let k = 0; k < n; k++) roses[c] += circle(rx + (d() - 0.5) * 11, ry + (d() - 0.5) * 7, 1.5 + d() * 1.3)
     }
   }
   // clipped hedges framing the lawn, with a little leaf texture
@@ -295,10 +340,13 @@ ${HEDGE_TEX}
 <g class="woods">${woods}</g>
 ${glasshouse(1240, 660)}
 <rect x="-40" y="610" width="1680" height="110" fill="url(#haze)" opacity=".45"/>
-<g class="trees">${trees}</g>
+<g class="trees">${trees}<path d="${sprinkle}" fill="#fffafb" opacity=".75"/></g>
 <rect x="-40" y="690" width="1680" height="60" fill="url(#haze)" opacity=".35"/>
 ${strandArt(BACK_STRAND)}
 <path d="${hedges}" fill="url(#hedgeG)"/><path d="${hedges}" fill="url(#hedgeTex)"/>
+<path d="${briars}" fill="#5d8150"/>${Object.entries(roses)
+      .map(([c, p]) => `<path d="${p}" fill="${c}"/>`)
+      .join('')}
 <path d="M-26 727H638M962 727H1626" fill="none" stroke="#b3cc9b" stroke-width="2" stroke-linecap="round" opacity=".7"/>`,
     // from the tips of the strand down to the bottom of the hills
     box: [-40, 420, 1640, 1000],
@@ -348,7 +396,12 @@ function chair(x: number, y: number, s: number, sash: boolean) {
     ? `<path d="M${P(-11.5, 38)}H${f(x + 11.5 * s)}V${f(y - 34 * s)}H${f(x - 11.5 * s)}Z" fill="url(#sashG)"/>` +
       `<path d="M${P(0, 36)}C${P(-6, 42)} ${P(-11, 39)} ${P(-9, 34.5)}C${P(-7, 31)} ${P(-3, 33)} ${P(0, 36)}ZM${P(0, 36)}C${P(6, 42)} ${P(11, 39)} ${P(9, 34.5)}C${P(7, 31)} ${P(3, 33)} ${P(0, 36)}Z" fill="url(#sashG)"/>` +
       `<path d="M${P(-1, 35)}C${P(-3, 28)} ${P(-5, 22)} ${P(-4, 16)}L${P(-2.4, 16.5)}C${P(-3, 22)} ${P(-1.5, 28)} ${P(0.6, 35)}ZM${P(1, 35)}C${P(3, 28)} ${P(4.5, 23)} ${P(5.5, 17)}L${P(7, 17.6)}C${P(5.6, 23)} ${P(3.6, 28)} ${P(1.6, 35)}Z" fill="#d79a9a"/>` +
-      `<circle cx="${f(x)}" cy="${f(y - 36 * s)}" r="${f(1.7 * s)}" fill="#c98585"/>`
+      `<circle cx="${f(x)}" cy="${f(y - 36 * s)}" r="${f(1.7 * s)}" fill="#c98585"/>` +
+      // a posy tucked into the knot
+      `<path d="${leafAt(x - 2 * s, y - 34 * s, 5 * s, 1.7 * s, 2.4)}${leafAt(x + 2 * s, y - 34 * s, 5 * s, 1.7 * s, 0.75)}${leafAt(x, y - 39 * s, 4 * s, 1.4 * s, -1.6)}" fill="#6f9561"/>` +
+      rosette(x - 3.2 * s, y - 35.4 * s, 2.3 * s, (x * 7) % 72, 'ivory') +
+      rosette(x + 3.2 * s, y - 35.4 * s, 2.3 * s, (x * 5) % 72, 'lilac') +
+      rosette(x, y - 37 * s, 3 * s, (x * 13) % 72, 'blush')
     : ''
   return shadow + `<path d="${d}" fill="url(#chairG)"/>` + bow
 }
@@ -387,6 +440,71 @@ function border(r: Rand, x0: number, x1: number) {
   return `<path d="${greens}" fill="#5f8455"/><path d="${greens}" fill="#7fa368" transform="translate(3 -4)" opacity=".55"/>${Object.entries(blooms)
     .map(([c, d]) => `<path d="${d}" fill="${c}"/>`)
     .join('')}<path d="${spires}" fill="#b9a3d8"/>`
+}
+
+/** The lawn up close: tufts of grass and a scatter of daisies, clover and buttercups, larger nearer us. */
+function meadow(r: Rand) {
+  const blades = ['', '']
+  const dots: Record<string, string> = { '#ffffff': '', '#d9c6ec': '', '#f3d36b': '', '#f6cdd6': '' }
+  let eyes = ''
+  for (let i = 0; i < 900; i++) {
+    const y = 776 + 236 * r() ** 0.85
+    const x = -40 + r() * 1680
+    const s = scaleAt(y)
+    if (Math.abs(x - AX) < hwAt(y) + 10 * s) continue // keep the aisle clear
+    const tone = r() < 0.55 ? 0 : 1
+    for (let k = 0; k < 4; k++) {
+      const bx = x + (r() - 0.5) * 6 * s
+      const h = (4 + r() * 6) * s * 1.3
+      const lean = (r() - 0.5) * h * 0.8
+      const w = 0.9 * s
+      blades[tone] += `M${f(bx - w)} ${f(y)}Q${f(bx + lean * 0.4)} ${f(y - h * 0.6)} ${f(bx + lean)} ${f(y - h)}Q${f(bx + lean * 0.4 + w)} ${f(y - h * 0.5)} ${f(bx + w)} ${f(y)}Z`
+    }
+  }
+  for (let i = 0; i < 520; i++) {
+    const y = 778 + 230 * r() ** 0.9
+    const x = -40 + r() * 1680
+    const s = scaleAt(y)
+    if (Math.abs(x - AX) < hwAt(y) + 8 * s) continue
+    const kind = r()
+    if (kind < 0.4) {
+      dots['#ffffff'] += circle(x, y, 1.7 * s) // daisy, with a yellow eye
+      eyes += circle(x, y, 0.65 * s)
+    } else if (kind < 0.65) dots['#d9c6ec'] += circle(x, y, 1.3 * s)
+    else if (kind < 0.85) dots['#f3d36b'] += circle(x, y, 1.1 * s)
+    else dots['#f6cdd6'] += circle(x, y, 1.3 * s)
+  }
+  return (
+    `<path d="${blades[0]}" fill="#6a9358"/><path d="${blades[1]}" fill="#a3c587"/>` +
+    Object.entries(dots)
+      .map(([c, d]) => `<path d="${d}" fill="${c}"/>`)
+      .join('') +
+    `<path d="${eyes}" fill="#f2c14e"/>`
+  )
+}
+
+/** A floral rangoli at the foot of the mandap: rings of petals round a marigold heart, seen almost edge-on. */
+function rangoli(cx: number, cy: number, R: number, squash: number) {
+  const rings: [number, number, string][] = [
+    [1, 30, '#f2c4cc'],
+    [0.8, 26, '#fffaf2'],
+    [0.6, 20, '#dccff0'],
+    [0.4, 14, '#f7dc8f'],
+  ]
+  let art = `<ellipse cx="${cx}" cy="${cy}" rx="${f(R * 1.06)}" ry="${f(R * 1.06 * squash)}" fill="#f3ead9" opacity=".7"/>`
+  for (const [k, n, colour] of rings) {
+    let d = ''
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + k * 3
+      const [x0, y0] = [cx + Math.cos(a) * R * k * 0.55, cy + Math.sin(a) * R * k * 0.55 * squash]
+      const [x1, y1] = [cx + Math.cos(a) * R * k, cy + Math.sin(a) * R * k * squash]
+      // a petal pointing outwards: long when it lies across our view, short and flat when it points at us
+      const W = R * k * 0.16 * (squash * Math.abs(Math.cos(a)) + Math.abs(Math.sin(a)))
+      d += leafAt(x0, y0, Math.hypot(x1 - x0, y1 - y0), Math.max(W, 0.5), Math.atan2(y1 - y0, x1 - x0))
+    }
+    art += `<path d="${d}" fill="${colour}"/>`
+  }
+  return `${art}<ellipse cx="${cx}" cy="${cy}" rx="${f(R * 0.2)}" ry="${f(R * 0.2 * squash)}" fill="#f2b51f"/>`
 }
 
 /** Stone urn with a clipped topiary ball. */
@@ -540,6 +658,10 @@ function mandap(r: Rand) {
     for (let i = 0; i < 3; i++) FAIRY.push(pt(far.inside(x, c.top + 8, c.W * 0.8, 6)))
   }
   art += far.paint()
+  // posies where the strands of lights are tied to the back fans
+  const ties = bouquet(rng(47))
+  for (const m of [-1, 1]) ties.heap(AX + m * 188, 590, 9, 7, 0.74, 2.4, 0.4)
+  art += ties.paint()
   // the two in front
   for (const m of [-1, 1]) {
     const x = AX + m * 92
@@ -582,6 +704,13 @@ function mandap(r: Rand) {
 }
 const pt = ([x, y]: readonly [number, number]) => ({ x, y })
 
+/** Flowers spilling over the rim of an urn, round the topiary's stem. */
+function urnFlowers(r: Rand, x: number, y: number, s: number) {
+  const b = bouquet(r)
+  b.heap(x, y - 47 * s, 24 * s, 7 * s, s * 0.85, 2.6, 0.6)
+  return b.paint()
+}
+
 const SIDE_STRANDS = [strand(-60, 456, 300, 640, 613, 590, 16, 0, 0.45), strand(987, 590, 1300, 640, 1660, 456, 16, 0.12, 0.45)]
 /** Lantern positions (filled while drawing the front layer) so their flames can glow. */
 const LANTERNS: { x: number; y: number; s: number; i: number }[] = []
@@ -604,9 +733,18 @@ export function front(): Art {
     const s = 0.5 + t * 1.8
     petals += `<path d="${petalPath(7 * s, 5 * s)}" transform="translate(${f(x)} ${f(y)}) rotate(${f(r() * 360)}) scale(1 .55)" fill="url(#ro-${r() < 0.6 ? 'blush' : 'ivory'}-0)"/>`
   }
-  // chairs, back to front; lanterns at every other row
+  // more petals drifted up against the mandap at the head of the aisle
+  const rp = rng(43)
+  for (let i = 0; i < 70; i++) {
+    const y = FOOT + 2 + rp() ** 1.6 * 36
+    const x = AX + (rp() - 0.5) * 2 * (hwAt(y) + 46)
+    const s = 0.35 + rp() * 0.3
+    petals += `<path d="${petalPath(7 * s, 5 * s)}" transform="translate(${f(x)} ${f(y)}) rotate(${f(rp() * 360)}) scale(1 .5)" fill="url(#ro-${rp() < 0.5 ? 'blush' : rp() < 0.5 ? 'ivory' : 'lilac'}-0)"/>`
+  }
+  // chairs, back to front: each row ends at the aisle in a heap of flowers, and every other row has a lantern standing in them
   let chairs = ''
   LANTERNS.length = 0
+  const ra = rng(29)
   const rows = [790, 812, 838, 870, 910, 962, 1032]
   rows.forEach((y, ri) => {
     const s = scaleAt(y)
@@ -614,12 +752,21 @@ export function front(): Art {
       const off = hwAt(y) + 22 * s + j * 32 * s
       chairs += chair(AX - off, y, s, j === 0) + chair(AX + off, y, s, j === 0)
     }
-    if (ri % 2 === 1) for (const m of [-1, 1]) LANTERNS.push({ x: AX + m * (hwAt(y) + 4 * s), y: y + 4, s: s * 1.05, i: 0.15 + ri * 0.1 })
+    const edge = bouquet(ra)
+    // as lush at the far rows as the near ones: about seven of everything whatever the size
+    for (const m of [-1, 1]) edge.heap(AX + m * (hwAt(y) + 9 * s), y - 5 * s, 15 * s, 8.5 * s, s, 3.3 / (s * s), 0.35)
+    chairs += edge.paint()
+    if (ri % 2 === 1)
+      for (const m of [-1, 1]) {
+        const l = { x: AX + m * (hwAt(y) + 4 * s), y: y + 4, s: s * 1.05, i: 0.15 + ri * 0.1 }
+        LANTERNS.push(l)
+        chairs += lantern(l.x, l.y, l.s)
+      }
   })
-  const lanterns = LANTERNS.map((l) => lantern(l.x, l.y, l.s)).join('')
   const strands = SIDE_STRANDS.map(strandArt).join('')
   FAIRY.length = 0
   const mandapArt = mandap(r)
+  const ru = rng(37)
   return {
     defs: `${roseDefs()}${HEDGE_TEX}
 <linearGradient id="lawnG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a6c288"/><stop offset=".5" stop-color="#8fb072"/><stop offset="1" stop-color="#729760"/></linearGradient>
@@ -633,13 +780,23 @@ export function front(): Art {
 <linearGradient id="crystalG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#dbe5f0"/></linearGradient>`,
     body: `<path d="M-40 770C400 760 1200 760 1640 770V1010H-40Z" fill="url(#lawnG)"/>
 <path d="${stripes}" fill="#ffffff" opacity=".07" clip-path="url(#lawnClip)"/>
+${meadow(rng(23))}
 ${border(r, -40, 650)}${border(r, 950, 1640)}
-${urn(150, 800, 0.95)}${urn(460, 794, 0.8)}${urn(1140, 794, 0.8)}${urn(1450, 800, 0.95)}
+${(
+  [
+    [150, 800, 0.95],
+    [460, 794, 0.8],
+    [1140, 794, 0.8],
+    [1450, 800, 0.95],
+  ] as const
+)
+  .map(([x, y, k]) => urn(x, y, k) + urnFlowers(ru, x, y, k))
+  .join('')}
 <path d="M786 ${FOOT + 2}L814 ${FOOT + 2}L${AX + 262} 1010L${AX - 262} 1010Z" fill="url(#runnerG)"/>
 <path d="M786 ${FOOT + 2}L${AX - 262} 1010M814 ${FOOT + 2}L${AX + 262} 1010" stroke="#e2dacd" stroke-width="1.2"/>
+${rangoli(AX, FOOT + 8, 64, 0.11)}
 <g class="petal-strew">${petals}</g>
 ${chairs}
-${lanterns}
 ${strands}
 ${mandapArt}`,
     // from the grasses on the mandap down to the nearest row of chairs
@@ -782,6 +939,25 @@ export function glowFront(): GlowGroup[] {
   ]
 }
 
+/** Fairy lights strung through the treetops, in two sets that twinkle out of step. (Call after back().) */
+export function treeLights(): [GlowGroup, GlowGroup] {
+  const r = rng(53)
+  const sets: [GlowGroup, GlowGroup] = [
+    { i: 0.62, ops: [] },
+    { i: 0.7, ops: [] },
+  ]
+  for (const c of CANOPIES)
+    for (let k = 0; k < c.R / 6; k++) {
+      const a = r() * Math.PI * 2
+      const q = Math.sqrt(r())
+      const x = c.x + Math.cos(a) * q * c.R * 0.8
+      const y = c.y + Math.sin(a) * q * c.R * 0.62
+      sets[k % 2].ops.push({ k: 'bulb', x, y, rx: 5, ry: 5, a: 0.9 }, { k: 'shape', d: circle(x, y, 0.9 + r() * 0.5), fill: '#fff4d0', a: 1 })
+    }
+  return sets
+}
+export const TREE_LIGHT_BOX: Art['box'] = [-40, 520, 1640, 730]
+
 /** Fairy lights woven through the garland, in two sets that twinkle out of step. (Call after front().) */
 export function fairyLights(): [GlowGroup, GlowGroup] {
   const r = rng(41)
@@ -846,11 +1022,66 @@ export function fireflies(n: number) {
   }).join('')
 }
 
+const WING_L = 'M12 6.2C8 .4 2.2-.6.9 2.3C-.1 5.1 3.7 7.1 12 7.1ZM12 7.7C6.2 8.3 2.7 10.7 3.9 12.8C5.1 14.6 9.5 12 12 8.5Z'
+const WING_R = 'M0 6.2C4 .4 9.8-.6 11.1 2.3C12.1 5.1 8.3 7.1 0 7.1ZM0 7.7C5.8 8.3 9.3 10.7 8.1 12.8C6.9 14.6 2.5 12 0 8.5Z'
+
+/**
+ * Butterflies flitting about the flowers by day. Each wing is its own little
+ * element so the wingbeat is a transform the GPU animates; stage.ts places
+ * them at their scene positions (`data-x`, `data-y`).
+ */
+export function butterflies() {
+  const r = rng(71)
+  const spots: [number, number][] = [
+    [742, 700],
+    [868, 664],
+    [652, 752],
+    [955, 758],
+    [606, 806],
+    [1012, 812],
+    [330, 798],
+    [1270, 798],
+  ]
+  const looks = [
+    ['#ffffff', '#c9b4e4'],
+    ['#fbf2c4', '#e2bf5c'],
+    ['#fde4ea', '#e6a3b5'],
+    ['#efe7fb', '#b49bd8'],
+  ]
+  return spots
+    .map(([x, y], i) => {
+      const [a, b] = looks[i % looks.length]
+      const vars = [
+        `--ax:${f(18 + r() * 28)}px`,
+        `--ay:${f(8 + r() * 14)}px`,
+        `--dur:${f(7 + r() * 6)}s`,
+        `--delay:${f(-r() * 10)}s`,
+        `--beat:${f(0.15 + r() * 0.08)}s`,
+        `--a:${a}`,
+        `--b:${b}`,
+      ].join(';')
+      return `<span class="bfly" data-x="${x}" data-y="${y}" style="${vars}"><span class="bfly-in"><svg class="wing wl" viewBox="0 0 12 14"><path d="${WING_L}"/><circle cx="2.6" cy="3" r="1.3"/><circle cx="5" cy="11.4" r=".9"/></svg><i class="bfly-body"></i><svg class="wing wr" viewBox="0 0 12 14"><path d="${WING_R}"/><circle cx="9.4" cy="3" r="1.3"/><circle cx="7" cy="11.4" r=".9"/></svg></span></span>`
+    })
+    .join('')
+}
+
 /** A few swallows crossing the afternoon sky. */
 export function birds() {
   const r = rng(61)
   return Array.from({ length: 5 }, (_, i) => {
     const s = 0.6 + r() * 0.6
     return `<span class="bird b${i}" style="top:${f(10 + r() * 22)}%;--s:${f(s)};--dur:${f(26 + r() * 16)}s;--delay:${f(-r() * 30)}s"><svg viewBox="-12 -6 24 10"><path d="M-11 0Q-5 -6 0 0Q5 -6 11 0Q5 -3 0 1Q-5 -3 -11 0Z"/></svg></span>`
-  }).join('')
+  }).join('') + doves()
 }
+
+/** A pair of white doves crossing the sky together. */
+const doves = () =>
+  [
+    [17, 1.45, -12],
+    [20.5, 1.3, -12.9],
+  ]
+    .map(
+      ([top, s, delay]) =>
+        `<span class="bird dove" style="top:${top}%;--s:${s};--dur:34s;--delay:${delay}s"><svg viewBox="-13 -7 26 11"><path d="M-12 .5C-8-6-3-5 0-.5C3-5 8-6 12 .5C7-2 3-1 0 1.6C-3-1-7-2-12 .5Z"/></svg></span>`,
+    )
+    .join('')

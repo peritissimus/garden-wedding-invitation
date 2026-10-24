@@ -106,6 +106,8 @@ html.is-dusk .twinkle { animation-play-state: running; }
 .bird { position: absolute; left: -6%; width: calc(22px * var(--s)); fill: #4d5464; animation: fly var(--dur) linear var(--delay) infinite; }
 .bird svg { display: block; width: 100%; height: auto; animation: flap 0.42s ease-in-out infinite alternate; transform-origin: 50% 60%; }
 @keyframes fly { from { transform: translate(0, 0); } 50% { transform: translate(56vw, -3vh); } to { transform: translate(114vw, 2vh); } }
+.bird.dove { fill: #fdfbf6; }
+.bird.dove path { stroke: #c9c3b8; stroke-width: 0.6; }
 @keyframes flap { from { transform: scaleY(1); } to { transform: scaleY(0.35); } }
 
 /* depth layers: pointer parallax on .px, camera tilt/zoom on .cam */
@@ -114,6 +116,25 @@ html.is-dusk .twinkle { animation-play-state: running; }
 
 /* the sunset and moonlit versions of each painted layer cross-fade over daylight (animations/day.ts) */
 .look.warm, .look.moon { opacity: 0; will-change: opacity; }
+
+/* butterflies flit about the flowers by day; each wing beats on the GPU */
+.butterflies { position: absolute; inset: 0; pointer-events: none; will-change: opacity; }
+.bfly { position: absolute; width: 0; height: 0; will-change: transform; animation: flit var(--dur) ease-in-out var(--delay) infinite alternate; }
+.bfly-in { position: absolute; left: -11px; top: -7px; width: 22px; height: 14px; display: flex; transform: scale(var(--s, 1)); }
+.wing { display: block; width: 11px; height: 14px; overflow: visible; animation: wingbeat var(--beat) ease-in-out infinite alternate; }
+.wl { transform-origin: 100% 50%; }
+.wr { transform-origin: 0 50%; }
+.wing path { fill: var(--a); stroke: var(--b); stroke-width: 0.6; }
+.wing circle { fill: var(--b); }
+.bfly-body { position: absolute; left: 10px; top: 3px; width: 2px; height: 8px; border-radius: 1px; background: #5b5246; }
+html.is-dusk .bfly, html.is-dusk .wing { animation-play-state: paused; }
+@keyframes wingbeat { from { transform: scaleX(1); } to { transform: scaleX(0.2); } }
+@keyframes flit {
+  0% { transform: translate(0, 0) rotate(-6deg); }
+  30% { transform: translate(var(--ax), calc(var(--ay) * -1)) rotate(8deg); }
+  60% { transform: translate(calc(var(--ax) * 1.6), calc(var(--ay) * 0.4)) rotate(-4deg); }
+  100% { transform: translate(calc(var(--ax) * 0.4), var(--ay)) rotate(5deg); }
+}
 
 /* the fairy lights in the garland twinkle out of step once it's dark */
 .fairy { animation: twinkle 1.8s ease-in-out infinite alternate; animation-play-state: paused; will-change: opacity; }

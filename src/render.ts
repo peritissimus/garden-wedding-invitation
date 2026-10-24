@@ -3,7 +3,7 @@ import { couple, dateRange, dayOf, days, esc, eventStart, fmtDay, fmtTime, fmtWe
 import { sharedDefs } from './art/defs'
 import { circleMark, flourish, icon, petals, rsvpArt, swatch, venueArt, wreath } from './art/ornaments'
 import { rose } from './art/rose'
-import { birds, fireflies } from './art/scene'
+import { birds, butterflies, fireflies } from './art/scene'
 
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
 
@@ -38,8 +38,8 @@ export function render(root: HTMLElement) {
   <div class="moon"><div class="slot"></div></div>
   <div class="clouds"><div class="cloud-band"><div class="slot day"></div><div class="slot golden"></div><div class="slot sunset"></div><div class="slot dusk"></div><div class="slot night"></div></div></div>
   <div class="birds">${birds()}</div>
-  <div class="px" data-depth="6"><div class="cam cam-back">${looks}<div class="slot glow"></div></div></div>
-  <div class="px" data-depth="14"><div class="cam cam-front">${looks}<div class="slot glow"></div><div class="slot glow fairy f0"></div><div class="slot glow fairy f1"></div></div></div>
+  <div class="px" data-depth="6"><div class="cam cam-back">${looks}<div class="slot glow"></div><div class="slot glow fairy f0"></div><div class="slot glow fairy f1"></div></div></div>
+  <div class="px" data-depth="14"><div class="cam cam-front">${looks}<div class="slot glow"></div><div class="slot glow fairy f0"></div><div class="slot glow fairy f1"></div><div class="butterflies">${butterflies()}</div></div></div>
   <div class="px" data-depth="30"><div class="cam cam-fg">${looks}</div></div>
   <div class="rays"><div class="slot"></div></div>
   <div class="bokeh"><div class="slot"></div></div>

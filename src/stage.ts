@@ -181,10 +181,14 @@ export interface Sky {
 
 export function mountStage(root: HTMLElement) {
   const $ = <T extends HTMLElement = HTMLElement>(s: string) => root.querySelector<T>(s)!
-  const art = { back: scene.back(), front: scene.front(), fg: scene.fg() }
-  const lightSets = { back: scene.glowBack(), front: scene.glowFront(), fairies: scene.fairyLights() }
-  const fx = scene.fx()
-  const starSheets = scene.stars()
+  // The artwork is generated on first use, a piece per frame, so the rose
+  // appears straight away instead of waiting for thousands of leaves.
+  const art: Partial<Record<Depth, Art>> = {}
+  const artOf = (d: Depth) => (art[d] ??= scene[d]())
+  let extras: { lights: ReturnType<typeof lightsOf>; fx: ReturnType<typeof scene.fx>; stars: ReturnType<typeof scene.stars> } | null = null
+  /** lights need the trees and the front of the garden drawn first (they record where the lights hang) */
+  const lightsOf = () => ({ back: scene.glowBack(), front: scene.glowFront(), fairies: scene.fairyLights(), trees: scene.treeLights() })
+  const more = () => (extras ??= { lights: lightsOf(), fx: scene.fx(), stars: scene.stars() })
   const sky = $<HTMLCanvasElement>('canvas.sky')
   const vignette = $<HTMLCanvasElement>('canvas.vignette')
 
@@ -272,6 +276,14 @@ export function mountStage(root: HTMLElement) {
     /** daylight pixels of each depth, kept until its other looks are graded from them */
     const days: Partial<Record<Depth, { scratch: HTMLCanvasElement; css: string; v: Box }>> = {}
     drawVignette()
+    // butterflies sit on the scene like everything else, a little larger nearer us
+    for (const b of root.querySelectorAll<HTMLElement>('.bfly')) {
+      const x = Number(b.dataset.x)
+      const y = Number(b.dataset.y)
+      b.style.left = `${L.ox + x * L.u}px`
+      b.style.top = `${L.oy + y * L.u}px`
+      b.style.setProperty('--s', (L.u * (0.75 + (y - 650) / 400)).toFixed(3))
+    }
 
     /** Paint artwork into a fresh canvas and swap it into its slot (the old one stays up until then). */
     const put = async (slot: HTMLElement, c: HTMLCanvasElement, a: Paintable, v: Box, keep = false) => {
@@ -296,16 +308,18 @@ export function mountStage(root: HTMLElement) {
       return put($(`.cloud-band .${look}`), canvasAt(x0, y0, x1 - x0, y1 - y0, Math.min(DPR, 1.5)), a, a.box)
     }
     const land = (d: Depth) => async () => {
-      const v = region(art[d].box, true)
+      const a = artOf(d)
+      await breathe() // generating the art and painting it are each a frame's work
+      const v = region(a.box, true)
       if (!v) return
       const c = sceneCanvas(v, DPR)
-      const scratch = await put($(`.cam-${d} .look.day`), c, art[d], v, true)
+      const scratch = await put($(`.cam-${d} .look.day`), c, a, v, true)
       if (scratch) days[d] = { scratch, css: c.style.cssText, v }
     }
     /** Golden hour and moonlight: re-colour the daylight pixels (or, failing that, paint through an SVG filter). */
     const looks = (d: Depth) => async () => {
       const day = days[d]
-      const v = day?.v ?? region(art[d].box, true)
+      const v = day?.v ?? region(artOf(d).box, true)
       if (!v) return
       const kind = d === 'back' ? 'far' : 'near'
       const ms = [scene.LOOKS.warm[kind], scene.LOOKS.moon[kind]]
@@ -319,7 +333,7 @@ export function mountStage(root: HTMLElement) {
         if (live()) graded.forEach((c, i) => slots[i].replaceChildren(c))
         return
       }
-      for (const [i, m] of ms.entries()) await put(slots[i], sceneCanvas(v, DPR), filtered(art[d], v, m), v)
+      for (const [i, m] of ms.entries()) await put(slots[i], sceneCanvas(v, DPR), filtered(artOf(d), v, m), v)
     }
     const glow = (slot: string, box: Box, groups: GlowGroup[]): Glow | null => {
       const v = region(box, true)
@@ -332,8 +346,9 @@ export function mountStage(root: HTMLElement) {
     const jobs: (() => unknown)[] = [
       // what the hero sees first
       ...DEPTHS.map(land),
+      more,
       centred('.sun .day', scene.sun('day'), 1.25),
-      centred('.rays .slot', fx.rays, 0.5),
+      () => centred('.rays .slot', more().fx.rays, 0.5)(),
       cloud('day'),
       // the rest of the day, in the order it's needed
       cloud('golden'),
@@ -345,18 +360,21 @@ export function mountStage(root: HTMLElement) {
       cloud('night'),
       () => {
         if (!live()) return
+        const sets = more().lights
         glows = [
-          glow('.cam-back .glow', [-40, 400, 1640, 700], lightSets.back),
-          glow('.cam-front .glow', [-40, 380, 1640, 1060], lightSets.front),
-          glow('.cam-front .fairy.f0', scene.FAIRY_BOX, [lightSets.fairies[0]]),
-          glow('.cam-front .fairy.f1', scene.FAIRY_BOX, [lightSets.fairies[1]]),
+          glow('.cam-back .glow:not(.fairy)', [-40, 400, 1640, 700], sets.back),
+          glow('.cam-back .fairy.f0', scene.TREE_LIGHT_BOX, [sets.trees[0]]),
+          glow('.cam-back .fairy.f1', scene.TREE_LIGHT_BOX, [sets.trees[1]]),
+          glow('.cam-front .glow:not(.fairy)', [-40, 380, 1640, 1060], sets.front),
+          glow('.cam-front .fairy.f0', scene.FAIRY_BOX, [sets.fairies[0]]),
+          glow('.cam-front .fairy.f1', scene.FAIRY_BOX, [sets.fairies[1]]),
         ].filter((g): g is Glow => !!g)
         lightsDrawn = -1
         drawLights()
       },
       centred('.moon .slot', scene.moon(), 1.5),
-      ...starSheets.map((a, i) => sheet(`.stars .st-${i}`, a, Math.min(DPR, 1.5))),
-      sheet('.bokeh .slot', fx.bokeh, 1),
+      ...[0, 1, 2].map((i) => () => sheet(`.stars .st-${i}`, more().stars[i], Math.min(DPR, 1.5))()),
+      () => sheet('.bokeh .slot', more().fx.bokeh, 1)(),
     ]
     await breathe()
     for (const job of jobs) {
