@@ -353,8 +353,11 @@ p { font-size: 20px; line-height: 1.75; margin: 0 auto; max-width: 34em; color: 
 /* Venue */
 .venue-art { display: block; width: min(340px, 86vw); height: auto; margin: 18px auto 8px; overflow: visible; }
 .venue-art .v-lines path { fill: none; stroke: var(--sage-d); stroke-opacity: 0.8; stroke-width: 0.9; stroke-linecap: round; stroke-linejoin: round; }
-.venue-art .glass { fill: #c6d4cd; fill-opacity: 0.4; }
-.venue-art .tree { fill: var(--sage); fill-opacity: 0.28; }
+.venue-art .fan { fill: #ffffff; fill-opacity: 0.6; }
+.venue-art .blush { fill: #f2c9cf; fill-opacity: 0.55; }
+.venue-art .lilac { fill: #dccff0; fill-opacity: 0.6; }
+.venue-art .ivory { fill: #f6ead6; fill-opacity: 0.7; }
+.venue-art .sage { fill: #9fb592; fill-opacity: 0.45; }
 .venue-name { font-size: clamp(34px, 5vw, 46px); }
 
 /* Attire */

@@ -46,7 +46,7 @@ src/
   art/                   # hand-built SVG artwork (no image files)
     seal.ts              # wax seal that cracks in two
     flora.ts             # eucalyptus / olive / gypsophila / rose corners
-    ornaments.ts         # wreath, flourish, glasshouse, icons, swatches, petals
+    ornaments.ts         # wreath, flourish, mandap drawing, icons, swatches, petals
     defs.ts              # shared gradients + watercolour filters
   animations/
     ease.ts              # Emil Kowalski's custom curves (CustomEase)
