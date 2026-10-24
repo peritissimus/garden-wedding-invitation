@@ -72,32 +72,37 @@ p { margin: 0 auto; max-width: 32em; font-size: 20px; line-height: 1.7; color: v
 .small { margin-top: 14px; font: 300 14px/1.7 var(--sans); color: var(--t-soft); }
 
 /* ---------- The garden stage (fixed behind everything) ---------- */
-.stage { position: fixed; inset: 0; z-index: 0; overflow: hidden; }
+/* Sized to the large viewport so a phone's toolbar sliding away never resizes (and repaints) it. */
+.stage { position: fixed; top: 0; left: 0; z-index: 0; width: 100%; height: 100vh; height: 100lvh; overflow: hidden; contain: strict; }
 /* nothing behind the rose is drawn until the camera dives into the light */
 html.is-locked:not(.show-stage) .stage { visibility: hidden; }
-.stage .sky { position: absolute; inset: 0; background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 56%, var(--sky-bottom) 100%); }
-.layer { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+/* Every piece of scenery is a canvas painted once (stage.ts); scrolling only moves and fades them. */
+.stage canvas { position: absolute; display: block; pointer-events: none; }
+.stage .slot { position: absolute; inset: 0; pointer-events: none; }
+.stage canvas.sky, .stage canvas.vignette { inset: 0; width: 100%; height: 100%; }
+.stars, .clouds, .bokeh, .rays, .birds { position: absolute; inset: 0; pointer-events: none; }
+/* sun, moon and sunbeams are drawn around their wrapper's origin and moved into place */
+.sun, .moon, .rays { inset: auto; left: 0; top: 0; width: 0; height: 0; position: absolute; }
+/* anything the day fades or moves gets its own compositor layer, so changing it repaints nothing */
+.stars, .sun, .moon, .clouds, .birds, .rays, .bokeh, .fireflies, .petals-day, .vignette,
+.sun .slot, .cloud-band .slot { will-change: transform, opacity; }
+.sun .slot:not(.day), .cloud-band .slot:not(.day), .bokeh, .vignette { opacity: 0; }
+/* The sun and clouds change colour by blending painted versions whose weights add up to 1.
+   Added light (plus-lighter) makes that an exact mix, so soft edges never build up a rim. */
+.sun, .cloud-band { isolation: isolate; }
+.sun .slot, .cloud-band .slot { mix-blend-mode: plus-lighter; }
 
-/* celestial */
-.night-sky { fill: #fff; }
+/* stars twinkle in two sheets, out of step */
 .twinkle { animation: twinkle 3.2s ease-in-out infinite alternate; animation-play-state: paused; }
-.twinkle.t1 { animation-duration: 4.4s; animation-delay: -1.2s; }
-.twinkle.t2 { animation-duration: 2.6s; animation-delay: -0.6s; }
+.stars .st-2 { animation-duration: 2.6s; animation-delay: -0.6s; }
 html.is-dusk .twinkle { animation-play-state: running; }
 @keyframes twinkle { from { opacity: 0.35; } to { opacity: 1; } }
 
-/* clouds drift on their own composited layers */
-.stage .clouds { position: absolute; inset: 0; pointer-events: none; }
-.cloud { position: absolute; will-change: transform; animation: cloud-drift 80s ease-in-out infinite alternate; }
-.cloud svg { display: block; width: 100%; height: auto; overflow: visible; }
-.cloud.c1 { animation-duration: 104s; animation-delay: -30s; }
-.cloud.c2 { animation-duration: 92s; animation-delay: -55s; }
-.cloud.c3 { animation-duration: 118s; animation-delay: -12s; }
-.cloud.c4 { animation-duration: 86s; animation-delay: -70s; }
+/* the clouds drift as one band across the sky */
+.cloud-band { position: absolute; inset: 0; will-change: transform; animation: cloud-drift 90s ease-in-out -30s infinite alternate; }
 @keyframes cloud-drift { from { transform: translateX(-70px); } to { transform: translateX(90px); } }
 
 /* swallows over the afternoon garden */
-.birds { position: absolute; inset: 0; pointer-events: none; }
 .bird { position: absolute; left: -6%; width: calc(22px * var(--s)); fill: #4d5464; animation: fly var(--dur) linear var(--delay) infinite; }
 .bird svg { display: block; width: 100%; height: auto; animation: flap 0.42s ease-in-out infinite alternate; transform-origin: 50% 60%; }
 @keyframes fly { from { transform: translate(0, 0); } 50% { transform: translate(56vw, -3vh); } to { transform: translate(114vw, 2vh); } }
@@ -107,28 +112,18 @@ html.is-dusk .twinkle { animation-play-state: running; }
 .px { position: absolute; inset: 0; will-change: transform; }
 .cam { position: absolute; inset: 0; will-change: transform; }
 
-/* the warm and moonlit copies of each painted layer cross-fade by opacity (animations/day.ts) */
-.land-warm, .land-moon { opacity: 0; will-change: opacity; }
-.wire { fill: none; stroke: #6b6458; stroke-width: 1.2; }
-.bulb { fill: #f7f1df; }
+/* the sunset and moonlit versions of each painted layer cross-fade over daylight (animations/day.ts) */
+.look.warm, .look.moon { opacity: 0; will-change: opacity; }
 
-/* lights: each one switches on in turn as --lights rises (--i = its place along the strand) */
-.lg { opacity: clamp(0, calc((var(--lights) * 1.5 - var(--i)) * 2.4), 1); }
-.fairy { animation: twinkle 1.8s ease-in-out infinite alternate; animation-play-state: paused; }
+/* the fairy lights in the garland twinkle out of step once it's dark */
+.fairy { animation: twinkle 1.8s ease-in-out infinite alternate; animation-play-state: paused; will-change: opacity; }
 .fairy.f1 { animation-duration: 2.5s; animation-delay: -0.8s; }
-.fairy.f2 { animation-duration: 1.3s; animation-delay: -0.3s; }
 html.is-dusk .fairy { animation-play-state: running; }
-.flame { transform-box: fill-box; transform-origin: 50% 100%; animation: flicker 1.1s ease-in-out infinite alternate; animation-play-state: paused; }
-html.is-dusk .flame { animation-play-state: running; }
-@keyframes flicker { 0% { transform: scale(1, 1); } 50% { transform: scale(0.9, 1.08); } 100% { transform: scale(1.05, 0.94); } }
-
-/* sunbeams and night bokeh */
-.fx .bokeh { opacity: 0; }
-.stage .vignette { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(120% 90% at 50% 42%, #05081a00 52%, #05081a 100%); opacity: 0; }
 
 /* petals drifting down from the bloom, fading as the day goes on */
+.petals-day { position: absolute; inset: 0; pointer-events: none; }
 .stage .petals { position: absolute; inset: 0; overflow: hidden; pointer-events: none; opacity: 0; transition: opacity 1.4s var(--ease-out); }
-.stage .petals.shown { opacity: var(--petals); transition: none; }
+.stage .petals.shown { opacity: 1; }
 .petal-track { position: absolute; top: 0; left: var(--x); width: var(--size); height: 100%; animation: fall var(--dur) linear var(--delay) infinite paused; }
 .petal-sway { display: block; perspective: 160px; animation: drift var(--spin) ease-in-out var(--delay) infinite alternate paused; }
 .petal-sway svg { display: block; width: 100%; height: auto; animation: flutter calc(var(--spin) * 0.6) ease-in-out infinite alternate paused; }

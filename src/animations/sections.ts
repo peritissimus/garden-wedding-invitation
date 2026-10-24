@@ -1,6 +1,6 @@
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { TEMPO, slow } from './tempo'
+import { TEMPO, blur, slow } from './tempo'
 
 const $ = <T extends Element = HTMLElement>(s: string, root: ParentNode = document) => root.querySelector<T>(s)
 const $$ = <T extends Element = HTMLElement>(s: string, root: ParentNode = document) => [...root.querySelectorAll<T>(s)]
@@ -37,7 +37,7 @@ export function setupSections(reduced: boolean) {
 /** Headings, labels, buttons: 600ms strong ease-out, 12px + light blur, 60ms stagger. */
 function reveals(reduced: boolean) {
   const els = $$('.reveal')
-  gsap.set(els, reduced ? { autoAlpha: 0 } : { autoAlpha: 0, y: 12, filter: 'blur(4px)' })
+  gsap.set(els, reduced ? { autoAlpha: 0 } : { autoAlpha: 0, y: 12, ...blur(4) })
   ScrollTrigger.batch(els, {
     start: 'top 92%',
     once: true,
@@ -46,7 +46,7 @@ function reveals(reduced: boolean) {
         batch,
         reduced
           ? { autoAlpha: 1, duration: 0.3, ease: 'none', stagger: 0.04 }
-          : { autoAlpha: 1, y: 0, filter: 'blur(0px)', duration: 0.6, ease: 'emilOut', stagger: 0.06, clearProps: 'filter,transform' },
+          : { autoAlpha: 1, y: 0, ...blur(0), duration: 0.6, ease: 'emilOut', stagger: 0.06, clearProps: 'filter,transform' },
       )),
   })
 }
@@ -56,9 +56,9 @@ function words() {
   const box = $('.words')
   if (!box) return
   const ws = $$('.word', box)
-  gsap.set(ws, { autoAlpha: 0, y: 6, filter: 'blur(3px)' })
+  gsap.set(ws, { autoAlpha: 0, y: 6, ...blur(3) })
   once(box, 'top 88%', () =>
-    slow(gsap.to(ws, { autoAlpha: 1, y: 0, filter: 'blur(0px)', duration: 0.45, ease: 'emilOut', stagger: 0.018, clearProps: 'filter,transform' })),
+    slow(gsap.to(ws, { autoAlpha: 1, y: 0, ...blur(0), duration: 0.45, ease: 'emilOut', stagger: 0.018, clearProps: 'filter,transform' })),
   )
 }
 

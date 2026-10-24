@@ -1,4 +1,5 @@
 import { gsap } from 'gsap'
+import { blur } from './tempo'
 
 export function prepareHero(reduced: boolean) {
   const hero = document.getElementById('hero')!
@@ -7,7 +8,7 @@ export function prepareHero(reduced: boolean) {
     gsap.set(hero.querySelectorAll('.h-in, .ink'), { autoAlpha: 0 })
     return
   }
-  gsap.set(hero.querySelectorAll('.h-in'), { autoAlpha: 0, y: 8, filter: 'blur(4px)' })
+  gsap.set(hero.querySelectorAll('.h-in'), { autoAlpha: 0, y: 8, ...blur(4) })
 }
 
 /**
@@ -22,7 +23,7 @@ export function heroTimeline(reduced: boolean) {
 
   if (reduced) return tl.to(hero.querySelectorAll('.h-in, .ink'), { autoAlpha: 1, duration: 0.4, ease: 'none' }, 0)
 
-  const settle = { autoAlpha: 1, y: 0, filter: 'blur(0px)', duration: 0.6, clearProps: 'filter' }
+  const settle = { autoAlpha: 1, y: 0, ...blur(0), duration: 0.6, clearProps: 'filter' }
   tl.to(hero.querySelector('.hero-copy > .eyebrow'), settle, 0.05)
   hero.querySelectorAll<HTMLElement>('.ink').forEach((el, i) => {
     tl.fromTo(

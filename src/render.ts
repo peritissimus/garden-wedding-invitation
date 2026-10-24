@@ -3,7 +3,7 @@ import { at, couple, esc, fmtDay, fmtTime, weddingStart } from './lib/format'
 import { sharedDefs } from './art/defs'
 import { circleMark, flourish, icon, petals, rsvpArt, swatch, venueArt, wreath } from './art/ornaments'
 import { rose } from './art/rose'
-import { backLayer, birds, celestial, clouds, fgLayer, fireflies, frontLayer, fxLayer, glowBack, glowFront, graded } from './art/scene'
+import { birds, fireflies } from './art/scene'
 
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
 
@@ -14,21 +14,26 @@ export function render(root: HTMLElement) {
   const month = start.toLocaleDateString('en-GB', { month: 'long' })
   const year = start.getFullYear()
   const mapQuery = config.venue.mapQuery ?? `${config.venue.name} ${config.venue.address}`
+  // each depth of the garden in daylight, sunset and moonlight (painted by stage.ts)
+  const looks = '<div class="slot look day"></div><div class="slot look warm"></div><div class="slot look moon"></div>'
 
   root.innerHTML = `${sharedDefs}
 <div class="stage" id="stage" aria-hidden="true">
-  <div class="sky"></div>
-  ${celestial()}
-  <div class="clouds">${clouds()}</div>
+  <canvas class="sky" width="1" height="64"></canvas>
+  <div class="stars"><div class="slot st-0"></div><div class="slot st-1 twinkle"></div><div class="slot st-2 twinkle"></div></div>
+  <div class="sun"><div class="slot day"></div><div class="slot golden"></div><div class="slot sunset"></div></div>
+  <div class="moon"><div class="slot"></div></div>
+  <div class="clouds"><div class="cloud-band"><div class="slot day"></div><div class="slot golden"></div><div class="slot sunset"></div><div class="slot dusk"></div><div class="slot night"></div></div></div>
   <div class="birds">${birds()}</div>
-  <div class="px" data-depth="6"><div class="cam cam-back">${backLayer()}${graded('back', 'warm')}${graded('back', 'moon')}${glowBack()}</div></div>
-  <div class="px" data-depth="14"><div class="cam cam-front">${frontLayer()}${graded('front', 'warm')}${graded('front', 'moon')}${glowFront()}</div></div>
-  <div class="px" data-depth="30"><div class="cam cam-fg">${fgLayer()}${graded('fg', 'warm')}${graded('fg', 'moon')}</div></div>
-  ${fxLayer()}
-  <div class="petals">${petals(14, 5)}</div>
+  <div class="px" data-depth="6"><div class="cam cam-back">${looks}<div class="slot glow"></div></div></div>
+  <div class="px" data-depth="14"><div class="cam cam-front">${looks}<div class="slot glow"></div><div class="slot glow fairy f0"></div><div class="slot glow fairy f1"></div></div></div>
+  <div class="px" data-depth="30"><div class="cam cam-fg">${looks}</div></div>
+  <div class="rays"><div class="slot"></div></div>
+  <div class="bokeh"><div class="slot"></div></div>
+  <div class="petals-day"><div class="petals">${petals(14, 5)}</div></div>
   <div class="fireflies" id="fireflies">${fireflies(44)}</div>
   <div class="shooting"><i></i><i></i></div>
-  <div class="vignette"></div>
+  <canvas class="vignette"></canvas>
 </div>
 
 <div class="intro" id="intro">

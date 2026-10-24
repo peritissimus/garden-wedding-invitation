@@ -3,21 +3,28 @@ import { petalPath } from './rose'
 
 /**
  * The garden, painted in depth layers that share one coordinate system
- * (1600×1000, anchored bottom-centre with `slice`):
+ * (1600×1000, anchored bottom-centre like SVG's `xMidYMax slice`):
  *
- *   celestial  sky things: sun, moon, stars, the Milky Way        (no camera)
- *   back       hills, haze, glasshouse, trees, hedges, far lights  (camera ×0.5)
- *   front      lawn, aisle, chairs, urns, beds, the rose arch     (camera ×1)
- *   fg         out-of-focus roses framing the bottom corners      (camera ×1.25)
- *   glow*      the lights themselves — never colour-graded
- *   fx         sunbeams and night bokeh
+ *   sky      stars, sun, moon, clouds                           (no camera)
+ *   back     hills, haze, glasshouse, trees, hedges, far lights (camera ×0.6)
+ *   front    lawn, aisle, chairs, urns, beds, the rose arch     (camera ×1)
+ *   fg       out-of-focus roses framing the bottom corners      (camera ×1.3)
+ *   glows    the lights themselves — never colour-graded
+ *   fx       sunbeams and night bokeh
  *
- * Each land layer is drawn once in daylight colours; the time of day is a
- * colour grade (CSS filter) on the whole layer, so scrolling never repaints
- * the artwork — only the GPU regrades it.
+ * None of this goes into the page as live SVG. Each piece is an SVG string
+ * that stage.ts paints once into a canvas, so while you scroll the browser
+ * only moves and fades a few bitmaps — cheap even on a phone — instead of
+ * repainting thousands of leaves every frame.
  */
 
-export const VB = 'viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMax slice"'
+/** A piece of scenery: gradients etc. in `defs`, shapes in `body`, and the part of the scene it covers (x0 y0 x1 y1). */
+export interface Art {
+  defs: string
+  body: string
+  box: [number, number, number, number]
+}
+
 const AX = 800
 const FOOT = 760 // where the arch stands
 const VP = 744 // vanishing point of the lawn stripes and aisle
@@ -55,35 +62,83 @@ export function rosette(x: number, y: number, R: number, rot: number, tone: 'blu
 /* Celestial                                                          */
 /* ------------------------------------------------------------------ */
 
-export function celestial() {
+/**
+ * The night sky in three sheets so they can twinkle out of step without
+ * repainting anything: the Milky Way with a third of the stars (steady),
+ * then two more thirds that each fade in and out on their own rhythm.
+ */
+export function stars(): [Art, Art, Art] {
   const r = rng(5)
   const groups = ['', '', '']
-  for (let i = 0; i < 150; i++) groups[i % 3] += `<circle cx="${f(r() * 1600)}" cy="${f(r() * 620)}" r="${f(0.5 + r() * 1.3)}"/>`
+  for (let i = 0; i < 150; i++) groups[i % 3] += circle(r() * 1600, r() * 620, 0.5 + r() * 1.3)
   let milky = ''
   for (let i = 0; i < 320; i++) {
     const t = r()
     milky += `<circle cx="${f(60 + 1480 * t + gauss(r) * 20)}" cy="${f(560 - 470 * t + gauss(r) * 46)}" r="${f(0.35 + r() * 0.7)}" opacity="${(0.3 + r() * 0.6).toFixed(2)}"/>`
   }
-  const v = (name: string) => `style="stop-color:var(--${name})"`
-  return `<svg class="layer celestial" ${VB} aria-hidden="true">
-<defs>
-<radialGradient id="sunGlow"><stop offset="0" ${v('sun-glow')} stop-opacity=".95"/><stop offset=".3" ${v('sun-glow')} stop-opacity=".38"/><stop offset="1" ${v('sun-glow')} stop-opacity="0"/></radialGradient>
-<radialGradient id="moonGlow"><stop offset="0" stop-color="#dfe6ff" stop-opacity=".45"/><stop offset="1" stop-color="#dfe6ff" stop-opacity="0"/></radialGradient>
-<radialGradient id="milkyGlow"><stop offset="0" stop-color="#d9defa" stop-opacity=".16"/><stop offset=".6" stop-color="#c6cdf2" stop-opacity=".06"/><stop offset="1" stop-color="#c6cdf2" stop-opacity="0"/></radialGradient>
-<linearGradient id="cloudG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" ${v('cloud-top')}/><stop offset="1" ${v('cloud-bottom')}/></linearGradient>
-<filter id="cloudSoft" x="-10%" y="-20%" width="120%" height="140%"><feGaussianBlur stdDeviation="1.6"/></filter>
-</defs>
-<g class="night-sky"><ellipse cx="800" cy="300" rx="860" ry="120" transform="rotate(-17 800 300)" fill="url(#milkyGlow)"/><g class="milky">${milky}</g>${groups
-    .map((g, i) => `<g class="twinkle t${i}">${g}</g>`)
-    .join('')}</g>
-<g class="moon"><circle r="210" fill="url(#moonGlow)"/><circle r="30" fill="#f7f3ea"/><circle cx="-9" cy="-6" r="5.5" fill="#e4dece" opacity=".7"/><circle cx="10" cy="9" r="3.6" fill="#e4dece" opacity=".6"/><circle cx="6" cy="-13" r="2.4" fill="#e4dece" opacity=".6"/></g>
-<g class="sun"><circle r="360" fill="url(#sunGlow)"/><circle class="sun-disc" r="54"/></g>
-</svg>`
+  const box: Art['box'] = [-40, 0, 1640, 660]
+  const sheet = (d: string) => ({ defs: '', body: `<path d="${d}" fill="#fff"/>`, box })
+  return [
+    {
+      defs: `<radialGradient id="milkyGlow"><stop offset="0" stop-color="#d9defa" stop-opacity=".16"/><stop offset=".6" stop-color="#c6cdf2" stop-opacity=".06"/><stop offset="1" stop-color="#c6cdf2" stop-opacity="0"/></radialGradient>`,
+      body: `<ellipse cx="800" cy="300" rx="860" ry="120" transform="rotate(-17 800 300)" fill="url(#milkyGlow)"/><g fill="#fff">${milky}<path d="${groups[0]}"/></g>`,
+      box,
+    },
+    sheet(groups[1]),
+    sheet(groups[2]),
+  ]
 }
 
-/** Painterly cumulus: lobes each shaded top-lit, softly blurred. Each cloud is its own drifting element. */
-export function clouds() {
+/** The sun in three lights (cross-faded as it sinks); centred on 0,0. */
+export const SUN_LOOKS = {
+  day: { disc: '#fff9e6', glow: '#ffeec2' },
+  golden: { disc: '#ffe6a3', glow: '#ffcf7a' },
+  sunset: { disc: '#ffbb73', glow: '#ff9566' },
+}
+export function sun(look: keyof typeof SUN_LOOKS): Art {
+  const { disc, glow } = SUN_LOOKS[look]
+  const stop = (o: number, a: number) => `<stop offset="${o}" stop-color="${glow}" stop-opacity="${a}"/>`
+  return {
+    defs: `<radialGradient id="sunGlow-${look}">${stop(0, 0.95)}${stop(0.3, 0.38)}${stop(1, 0)}</radialGradient>`,
+    body: `<circle r="360" fill="url(#sunGlow-${look})"/><circle r="54" fill="${disc}"/>`,
+    box: [-360, -360, 360, 360],
+  }
+}
+
+/** Full moon with a soft halo; centred on 0,0. */
+export function moon(): Art {
+  return {
+    defs: `<radialGradient id="moonGlow"><stop offset="0" stop-color="#dfe6ff" stop-opacity=".45"/><stop offset="1" stop-color="#dfe6ff" stop-opacity="0"/></radialGradient>`,
+    body: `<circle r="210" fill="url(#moonGlow)"/><circle r="30" fill="#f7f3ea"/><circle cx="-9" cy="-6" r="5.5" fill="#e4dece" opacity=".7"/><circle cx="10" cy="9" r="3.6" fill="#e4dece" opacity=".6"/><circle cx="6" cy="-13" r="2.4" fill="#e4dece" opacity=".6"/>`,
+    box: [-210, -210, 210, 210],
+  }
+}
+
+/** Cloud colours (top-lit → shaded underside) through the day. */
+export const CLOUD_LOOKS = {
+  day: ['#ffffff', '#dde7ee'],
+  golden: ['#fff6e6', '#efc8a2'],
+  sunset: ['#f9c6b0', '#b77f96'],
+  dusk: ['#7f73a3', '#4b4577'],
+  night: ['#2c335e', '#1d2348'],
+}
+/** Where each cloud sits: left % and top % of the sky, width in px. */
+const CLOUD_SPOTS: [number, number, number][] = [
+  [8, 9, 300],
+  [36, 4, 220],
+  [58, 22, 180],
+  [80, 8, 260],
+  [94, 26, 160],
+]
+
+/**
+ * Painterly cumulus — lobes shaded top-lit, softly blurred — laid out across
+ * the sky of a `w`×`h` stage. Unlike the rest of the scene this is in CSS px:
+ * clouds keep their size whatever the screen.
+ */
+export function clouds(w: number, h: number, look: keyof typeof CLOUD_LOOKS): Art {
   const r = rng(17)
+  const [top, bottom] = CLOUD_LOOKS[look]
   const lobes = () => {
     const base = `<ellipse cx="10" cy="22" rx="150" ry="22"/>`
     const puffs = Array.from({ length: 9 }, (_, i) => {
@@ -91,21 +146,24 @@ export function clouds() {
       const rr = 26 + Math.sin((i / 8) * Math.PI) * 30 + r() * 10
       return `<ellipse cx="${f(x)}" cy="${f(14 - rr * 0.55)}" rx="${f(rr)}" ry="${f(rr * 0.82)}"/>`
     }).join('')
-    return `<g filter="url(#cloudSoft)" fill="url(#cloudG)">${base}${puffs}</g>`
+    return `<g filter="url(#cloudSoft)" fill="url(#cloudG-${look})">${base}${puffs}</g>`
   }
-  const spots: [number, number, number][] = [
-    [8, 9, 300],
-    [36, 4, 220],
-    [58, 22, 180],
-    [80, 8, 260],
-    [94, 26, 160],
-  ]
-  return spots
-    .map(
-      ([x, y, w], i) =>
-        `<div class="cloud c${i}" style="left:${x}%;top:${y}%;width:${w}px"><svg viewBox="-180 -90 360 140" aria-hidden="true">${lobes()}</svg></div>`,
-    )
-    .join('')
+  let x0 = Infinity
+  let x1 = -Infinity
+  let y1 = 0
+  const body = CLOUD_SPOTS.map(([x, y, cw]) => {
+    const left = (x / 100) * w
+    const top = (y / 100) * h
+    x0 = Math.min(x0, left)
+    x1 = Math.max(x1, left + cw)
+    y1 = Math.max(y1, top + (cw * 140) / 360)
+    return `<g transform="translate(${f(left)} ${f(top)}) scale(${(cw / 360).toFixed(4)}) translate(180 90)">${lobes()}</g>`
+  }).join('')
+  return {
+    defs: `<linearGradient id="cloudG-${look}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${top}"/><stop offset="1" stop-color="${bottom}"/></linearGradient><filter id="cloudSoft" x="-10%" y="-20%" width="120%" height="140%"><feGaussianBlur stdDeviation="1.6"/></filter>`,
+    body,
+    box: [x0 - 12, 0, x1 + 12, y1 + 12],
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -183,16 +241,18 @@ function strand(x0: number, y0: number, cx: number, cy: number, x1: number, y1: 
   }
   return { wire: `M${x0} ${y0}Q${cx} ${cy} ${x1} ${y1}`, bulbs }
 }
-const bulbBodies = (bs: { x: number; y: number }[]) =>
-  bs.map((b) => `M${f(b.x - 1.5)} ${f(b.y - 6.5)}h3v3h-3Z${circle(b.x, b.y, 3.6)}`).join('')
-const bulbGlows = (bs: { x: number; y: number; i: number }[], r = 22) =>
-  bs
-    .map((b) => `<g class="lg" style="--i:${b.i.toFixed(3)}"><circle cx="${f(b.x)}" cy="${f(b.y)}" r="${r}" fill="url(#bulbGlow)"/><circle cx="${f(b.x)}" cy="${f(b.y)}" r="3.4" fill="#fff3c9"/></g>`)
-    .join('')
+/** A strand's wire and its unlit bulbs, as painted into the scenery. */
+const strandArt = (st: ReturnType<typeof strand>) =>
+  `<path d="${st.wire}" fill="none" stroke="#6b6458" stroke-width="1.2"/><path d="${st.bulbs
+    .map((b) => `M${f(b.x - 1.5)} ${f(b.y - 6.5)}h3v3h-3Z${circle(b.x, b.y, 3.6)}`)
+    .join('')}" fill="#f7f1df"/>`
+
+/** Leaf texture for clipped hedges and topiary (each painted layer carries its own copy). */
+const HEDGE_TEX = `<pattern id="hedgeTex" width="14" height="12" patternUnits="userSpaceOnUse"><circle cx="3" cy="3" r="2.2" fill="#fff" opacity=".07"/><circle cx="10" cy="8" r="2.6" fill="#000" opacity=".06"/><circle cx="12" cy="2" r="1.6" fill="#fff" opacity=".05"/></pattern>`
 
 const BACK_STRAND = strand(250, 432, AX, 560, 1350, 432, 22, 0.1, 0.5)
 
-export function backLayer() {
+export function back(): Art {
   const r = rng(9)
   const tones = ['#4d6a48', '#62825a', '#789868', '#8fae79']
   const hazy = ['#8fa69a', '#9cb2a4', '#abc0b1', '#b9cdbd']
@@ -221,17 +281,15 @@ export function backLayer() {
   const hedge = (x0: number, x1: number) =>
     `M${x0} 812V738C${x0} 730 ${x0 + 6} 726 ${x0 + 14} 726H${x1 - 14}C${x1 - 6} 726 ${x1} 730 ${x1} 738V812Z`
   const hedges = hedge(-40, 652) + hedge(948, 1640)
-  return `<svg class="layer land back" ${VB} aria-hidden="true">
-<defs>
-<linearGradient id="ridgeA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c9d9d9"/><stop offset="1" stop-color="#b6c9c3"/></linearGradient>
+  return {
+    defs: `<linearGradient id="ridgeA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c9d9d9"/><stop offset="1" stop-color="#b6c9c3"/></linearGradient>
 <linearGradient id="ridgeB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b2c6b3"/><stop offset="1" stop-color="#9eb49e"/></linearGradient>
 <linearGradient id="haze" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".55" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
 <linearGradient id="poplarG" x1="0" x2="1"><stop offset="0" stop-color="#4c6a45"/><stop offset=".55" stop-color="#6c8c5b"/><stop offset="1" stop-color="#8aa975"/></linearGradient>
 <linearGradient id="hedgeG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8db07a"/><stop offset=".35" stop-color="#6f925f"/><stop offset="1" stop-color="#4a6643"/></linearGradient>
-<pattern id="hedgeTex" width="14" height="12" patternUnits="userSpaceOnUse"><circle cx="3" cy="3" r="2.2" fill="#fff" opacity=".07"/><circle cx="10" cy="8" r="2.6" fill="#000" opacity=".06"/><circle cx="12" cy="2" r="1.6" fill="#fff" opacity=".05"/></pattern>
-<linearGradient id="glassG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e6eff0"/><stop offset="1" stop-color="#bccdd0"/></linearGradient>
-</defs>
-<g id="art-back"><path d="M-40 640C120 596 300 588 470 612C620 634 720 600 870 588C1030 576 1160 626 1310 612C1440 600 1540 606 1640 618V1000H-40Z" fill="url(#ridgeA)"/>
+${HEDGE_TEX}
+<linearGradient id="glassG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e6eff0"/><stop offset="1" stop-color="#bccdd0"/></linearGradient>`,
+    body: `<path d="M-40 640C120 596 300 588 470 612C620 634 720 600 870 588C1030 576 1160 626 1310 612C1440 600 1540 606 1640 618V1000H-40Z" fill="url(#ridgeA)"/>
 <rect x="-40" y="560" width="1680" height="140" fill="url(#haze)" opacity=".7"/>
 <path d="M-40 668C160 640 360 632 560 648C720 660 860 640 1000 634C1140 628 1300 654 1460 646C1540 642 1600 646 1640 650V1000H-40Z" fill="url(#ridgeB)"/>
 <g class="woods">${woods}</g>
@@ -239,11 +297,12 @@ ${glasshouse(1240, 660)}
 <rect x="-40" y="610" width="1680" height="110" fill="url(#haze)" opacity=".45"/>
 <g class="trees">${trees}</g>
 <rect x="-40" y="690" width="1680" height="60" fill="url(#haze)" opacity=".35"/>
-<path class="wire" d="${BACK_STRAND.wire}"/><path class="bulb" d="${bulbBodies(BACK_STRAND.bulbs)}"/>
+${strandArt(BACK_STRAND)}
 <path d="${hedges}" fill="url(#hedgeG)"/><path d="${hedges}" fill="url(#hedgeTex)"/>
-<path d="M-26 727H638M962 727H1626" fill="none" stroke="#b3cc9b" stroke-width="2" stroke-linecap="round" opacity=".7"/>
-</g>
-</svg>`
+<path d="M-26 727H638M962 727H1626" fill="none" stroke="#b3cc9b" stroke-width="2" stroke-linecap="round" opacity=".7"/>`,
+    // from the tips of the strand down to the bottom of the hills
+    box: [-40, 420, 1640, 1000],
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -367,7 +426,7 @@ function sampleArch(r: Rand) {
 }
 
 /** Points for the fairy lights woven through the garland (filled while drawing the arch). */
-export const FAIRY: { x: number; y: number }[] = []
+const FAIRY: { x: number; y: number }[] = []
 
 function arch(r: Rand) {
   const tones = ['#4f7349', '#628a57', '#79a068', '#97b980']
@@ -439,9 +498,9 @@ ${roses.join('')}${feet}
 
 const SIDE_STRANDS = [strand(-60, 456, 330, 612, 724, 470, 16, 0, 0.45), strand(876, 470, 1270, 612, 1660, 456, 16, 0.12, 0.45)]
 /** Lantern positions (filled while drawing the front layer) so their flames can glow. */
-export const LANTERNS: { x: number; y: number; s: number; i: number }[] = []
+const LANTERNS: { x: number; y: number; s: number; i: number }[] = []
 
-export function frontLayer() {
+export function front(): Art {
   const r = rng(21)
   // lawn with mown stripes converging on the arch
   let stripes = ''
@@ -472,12 +531,11 @@ export function frontLayer() {
     if (ri % 2 === 1) for (const m of [-1, 1]) LANTERNS.push({ x: AX + m * (hwAt(y) + 4 * s), y: y + 4, s: s * 1.05, i: 0.15 + ri * 0.1 })
   })
   const lanterns = LANTERNS.map((l) => lantern(l.x, l.y, l.s)).join('')
-  const strands = SIDE_STRANDS.map((st) => `<path class="wire" d="${st.wire}"/><path class="bulb" d="${bulbBodies(st.bulbs)}"/>`).join('')
+  const strands = SIDE_STRANDS.map(strandArt).join('')
   FAIRY.length = 0
   const archArt = arch(r)
-  return `<svg class="layer land front" ${VB} aria-hidden="true">
-<defs>
-${roseDefs()}
+  return {
+    defs: `${roseDefs()}${HEDGE_TEX}
 <linearGradient id="lawnG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a6c288"/><stop offset=".5" stop-color="#8fb072"/><stop offset="1" stop-color="#729760"/></linearGradient>
 <clipPath id="lawnClip"><path d="M-40 770C400 760 1200 760 1640 770V1010H-40Z"/></clipPath>
 <linearGradient id="runnerG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ece4d6"/><stop offset="1" stop-color="#f5efe5"/></linearGradient>
@@ -485,9 +543,8 @@ ${roseDefs()}
 <linearGradient id="sashG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0c3c0"/><stop offset="1" stop-color="#dc9f9f"/></linearGradient>
 <linearGradient id="stoneG" x1="0" x2="1"><stop offset="0" stop-color="#e2dccf"/><stop offset=".6" stop-color="#f3efe6"/><stop offset="1" stop-color="#d1c9b9"/></linearGradient>
 <radialGradient id="ballG" cx=".62" cy=".3" r=".8"><stop offset="0" stop-color="#a9c792"/><stop offset=".55" stop-color="#6f9161"/><stop offset="1" stop-color="#486743"/></radialGradient>
-<linearGradient id="chiffon" x1="0" x2="1"><stop offset="0" stop-color="#ffffff" stop-opacity=".55"/><stop offset=".22" stop-color="#efe9e2" stop-opacity=".85"/><stop offset=".45" stop-color="#ffffff" stop-opacity=".6"/><stop offset=".68" stop-color="#ebe4dc" stop-opacity=".85"/><stop offset="1" stop-color="#ffffff" stop-opacity=".6"/></linearGradient>
-</defs>
-<g id="art-front"><path d="M-40 770C400 760 1200 760 1640 770V1010H-40Z" fill="url(#lawnG)"/>
+<linearGradient id="chiffon" x1="0" x2="1"><stop offset="0" stop-color="#ffffff" stop-opacity=".55"/><stop offset=".22" stop-color="#efe9e2" stop-opacity=".85"/><stop offset=".45" stop-color="#ffffff" stop-opacity=".6"/><stop offset=".68" stop-color="#ebe4dc" stop-opacity=".85"/><stop offset="1" stop-color="#ffffff" stop-opacity=".6"/></linearGradient>`,
+    body: `<path d="M-40 770C400 760 1200 760 1640 770V1010H-40Z" fill="url(#lawnG)"/>
 <path d="${stripes}" fill="#ffffff" opacity=".07" clip-path="url(#lawnClip)"/>
 ${border(r, -40, 650)}${border(r, 950, 1640)}
 ${urn(150, 800, 0.95)}${urn(460, 794, 0.8)}${urn(1140, 794, 0.8)}${urn(1450, 800, 0.95)}
@@ -497,16 +554,17 @@ ${urn(150, 800, 0.95)}${urn(460, 794, 0.8)}${urn(1140, 794, 0.8)}${urn(1450, 800
 ${chairs}
 ${lanterns}
 ${strands}
-${archArt}
-</g>
-</svg>`
+${archArt}`,
+    // from the top of the garland down to the nearest row of chairs
+    box: [-40, 380, 1640, 1045],
+  }
 }
 
 /* ------------------------------------------------------------------ */
 /* Foreground: out-of-focus roses (depth of field)                    */
 /* ------------------------------------------------------------------ */
 
-export function fgLayer() {
+export function fg(): Art {
   const r = rng(33)
   let leaves = ''
   const cluster = (cx: number, cy: number, spread: number, n: number) => {
@@ -517,76 +575,137 @@ export function fgLayer() {
   cluster(1480, 1010, 320, 14)
   cluster(560, 1040, 90, 4)
   cluster(1040, 1040, 90, 4)
-  return `<svg class="layer land fg" ${VB} aria-hidden="true">
-<defs><filter id="dof" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="6"/></filter></defs>
-<g id="art-fg" filter="url(#dof)">
+  return {
+    defs: `${roseDefs()}<filter id="dof" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="6"/></filter>`,
+    body: `<g filter="url(#dof)">
 <path d="${leaves}" fill="#4f7347"/>
 ${rosette(96, 962, 74, 12, 'blush')}${rosette(250, 1012, 56, 40, 'ivory')}${rosette(1500, 968, 70, 30, 'ivory')}${rosette(1362, 1016, 50, 8, 'peach')}
 ${rosette(586, 1018, 30, 20, 'blush')}${rosette(1016, 1020, 28, 50, 'ivory')}
-</g>
-</svg>`
+</g>`,
+    box: [-120, 820, 1720, 1200],
+  }
 }
 
 /**
- * Time-of-day looks: the same artwork re-coloured once through a colour
- * matrix (fitted to target colours), then cross-faded by opacity while you
- * scroll — so the light changes without the browser re-filtering every frame.
+ * Time-of-day looks: the painted daylight layers are re-coloured once through
+ * a colour matrix (the feColorMatrix maths, fitted to target colours), then
+ * cross-faded by opacity while you scroll.
  *   warm  golden hour → sunset (whites → peach, greens → warm olive)
  *   moon  moonlight (whites → pale moon-blue, foliage → deep blue-teal)
  * Far layers get a lifted offset so they stay hazier.
  */
-const LOOKS = {
+const matrix = (s: string) => s.trim().split(/\s+/).map(Number)
+export const LOOKS = {
   warm: {
-    near: '0.900 -0.057 0.220 0 -0.004  0.308 0.520 0.159 0 -0.066  0.274 -0.208 0.809 0 -0.032  0 0 0 1 0',
-    far: '0.900 -0.057 0.220 0 0.036  0.308 0.520 0.159 0 -0.026  0.274 -0.208 0.809 0 0.008  0 0 0 1 0',
+    near: matrix('0.900 -0.057 0.220 0 -0.004  0.308 0.520 0.159 0 -0.066  0.274 -0.208 0.809 0 -0.032  0 0 0 1 0'),
+    far: matrix('0.900 -0.057 0.220 0 0.036  0.308 0.520 0.159 0 -0.026  0.274 -0.208 0.809 0 0.008  0 0 0 1 0'),
   },
   moon: {
-    near: '0.327 0.407 0.076 0 -0.25  0.195 0.503 0.0715 0 -0.17  0.2235 0.439 0.202 0 -0.115  0 0 0 1 0',
-    far: '0.30 0.38 0.07 0 -0.17  0.18 0.47 0.066 0 -0.1  0.21 0.41 0.19 0 -0.05  0 0 0 1 0',
+    near: matrix('0.327 0.407 0.076 0 -0.25  0.195 0.503 0.0715 0 -0.17  0.2235 0.439 0.202 0 -0.115  0 0 0 1 0'),
+    far: matrix('0.30 0.38 0.07 0 -0.17  0.18 0.47 0.066 0 -0.1  0.21 0.41 0.19 0 -0.05  0 0 0 1 0'),
   },
-}
-export function graded(id: 'back' | 'front' | 'fg', look: keyof typeof LOOKS) {
-  const m = LOOKS[look][id === 'back' ? 'far' : 'near']
-  return `<svg class="layer land-${look}" ${VB} aria-hidden="true"><defs><filter id="${look}-${id}" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="${m}"/></filter></defs><g filter="url(#${look}-${id})"><use href="#art-${id}"/></g></svg>`
 }
 
 /* ------------------------------------------------------------------ */
 /* Lights (never graded) and effects                                  */
 /* ------------------------------------------------------------------ */
 
-const glowDefs = `<defs>
-<radialGradient id="bulbGlow"><stop offset="0" stop-color="#ffd98c" stop-opacity=".9"/><stop offset=".35" stop-color="#ffc766" stop-opacity=".32"/><stop offset="1" stop-color="#ffc766" stop-opacity="0"/></radialGradient>
-<radialGradient id="warmGlow"><stop offset="0" stop-color="#ffd27a" stop-opacity=".75"/><stop offset="1" stop-color="#ffd27a" stop-opacity="0"/></radialGradient>
-</defs>`
+/**
+ * The lights are drawn straight onto a canvas (stage.ts) so each can switch
+ * on in turn as the evening comes: a group lights up once `lights` passes
+ * its place `i` along the strands.
+ */
+export type GlowOp =
+  /** a soft glow: `bulb` (tight, bright centre) or `warm` (broad wash), stretched to an ellipse */
+  | { k: 'bulb' | 'warm'; x: number; y: number; rx: number; ry: number; a: number }
+  /** a solid shape: lit window panes, a lantern flame, a bulb filament */
+  | { k: 'shape'; d: string; fill: string; a: number }
+export interface GlowGroup {
+  i: number
+  ops: GlowOp[]
+}
+export const GLOW_SPRITES = {
+  bulb: [
+    [0, '#ffd98c', 0.9],
+    [0.35, '#ffc766', 0.32],
+    [1, '#ffc766', 0],
+  ],
+  warm: [
+    [0, '#ffd27a', 0.75],
+    [1, '#ffd27a', 0],
+  ],
+} as const
 
-export function glowBack() {
+const ellipsePath = (x: number, y: number, rx: number, ry: number) =>
+  `M${f(x - rx)} ${f(y)}a${f(rx)} ${f(ry)} 0 1 0 ${f(2 * rx)} 0a${f(rx)} ${f(ry)} 0 1 0 ${f(-2 * rx)} 0`
+const bulbs = (bs: { x: number; y: number; i: number }[], r: number): GlowGroup[] =>
+  bs.map((b) => ({
+    i: b.i,
+    ops: [
+      { k: 'bulb', x: b.x, y: b.y, rx: r, ry: r, a: 1 },
+      { k: 'shape', d: circle(b.x, b.y, 3.4), fill: '#fff3c9', a: 1 },
+    ],
+  }))
+
+/** Lights in the far garden: the glasshouse windows and the strand behind the arch. */
+export function glowBack(): GlowGroup[] {
   const x = 1240
   const g = 660
   let panes = ''
   for (let px = x - 49; px < x + 49; px += 9.2) panes += `M${f(px + 1)} ${g - 35}h7v12h-7ZM${f(px + 1)} ${g - 21}h7v12h-7Z`
   panes += `M${x - 69} ${g - 22}h8v13h-8ZM${x - 60} ${g - 22}h8v13h-8ZM${x + 52} ${g - 22}h8v13h-8ZM${x + 61} ${g - 22}h8v13h-8Z`
-  return `<svg class="layer glow" ${VB} aria-hidden="true">${glowDefs}
-<g class="lg" style="--i:.55"><ellipse cx="${x}" cy="${g - 22}" rx="90" ry="34" fill="url(#warmGlow)" opacity=".38"/><path d="${panes}" fill="#ffdc96" opacity=".78"/><path d="M${x - 52} ${g - 37}Q${x} ${g - 66} ${x + 52} ${g - 37}Z" fill="#ffe4b0" opacity=".32"/></g>
-${bulbGlows(BACK_STRAND.bulbs, 16)}
-</svg>`
+  return [
+    {
+      i: 0.55,
+      ops: [
+        { k: 'warm', x, y: g - 22, rx: 90, ry: 34, a: 0.38 },
+        { k: 'shape', d: panes, fill: '#ffdc96', a: 0.78 },
+        { k: 'shape', d: `M${x - 52} ${g - 37}Q${x} ${g - 66} ${x + 52} ${g - 37}Z`, fill: '#ffe4b0', a: 0.32 },
+      ],
+    },
+    ...bulbs(BACK_STRAND.bulbs, 16),
+  ]
 }
 
-export function glowFront() {
+/** Lights around the aisle: a warm wash under the arch, the side strands and the lanterns. (Call after front().) */
+export function glowFront(): GlowGroup[] {
+  return [
+    {
+      i: 0.3,
+      ops: [
+        { k: 'warm', x: AX, y: FOOT - 70, rx: 150, ry: 190, a: 0.5 },
+        { k: 'warm', x: AX, y: FOOT + 30, rx: 230, ry: 60, a: 0.35 },
+      ],
+    },
+    ...SIDE_STRANDS.flatMap((st) => bulbs(st.bulbs, 22)),
+    ...LANTERNS.map((l) => ({
+      i: l.i,
+      ops: [
+        { k: 'warm', x: l.x, y: l.y - 16 * l.s, rx: 34 * l.s, ry: 34 * l.s, a: 1 },
+        { k: 'shape', d: ellipsePath(l.x, l.y - 15.5 * l.s, 1.6 * l.s, 3.2 * l.s), fill: '#ffe6a6', a: 1 },
+      ],
+    }) as GlowGroup),
+  ]
+}
+
+/** Fairy lights woven through the garland, in two sets that twinkle out of step. (Call after front().) */
+export function fairyLights(): [GlowGroup, GlowGroup] {
   const r = rng(41)
-  const bulbs = SIDE_STRANDS.map((st) => bulbGlows(st.bulbs)).join('')
-  const flames = LANTERNS.map(
-    (l) =>
-      `<g class="lg" style="--i:${l.i.toFixed(2)}"><circle cx="${f(l.x)}" cy="${f(l.y - 16 * l.s)}" r="${f(34 * l.s)}" fill="url(#warmGlow)"/><ellipse class="flame" cx="${f(l.x)}" cy="${f(l.y - 15.5 * l.s)}" rx="${f(1.6 * l.s)}" ry="${f(3.2 * l.s)}" fill="#ffe6a6"/></g>`,
-  ).join('')
-  const fairy = FAIRY.map((p, k) => `<g class="fairy f${k % 3}"><circle cx="${f(p.x)}" cy="${f(p.y)}" r="7" fill="url(#bulbGlow)"/><circle cx="${f(p.x)}" cy="${f(p.y)}" r="${f(1.3 + r() * 1)}" fill="#fff4d0"/></g>`).join('')
-  return `<svg class="layer glow" ${VB} aria-hidden="true">${glowDefs}
-<g class="lg" style="--i:.3"><ellipse cx="${AX}" cy="${FOOT - 70}" rx="150" ry="190" fill="url(#warmGlow)" opacity=".5"/><ellipse cx="${AX}" cy="${FOOT + 30}" rx="230" ry="60" fill="url(#warmGlow)" opacity=".35"/></g>
-${bulbs}${flames}
-<g class="lg fairies" style="--i:.4">${fairy}</g>
-</svg>`
+  const sets: [GlowGroup, GlowGroup] = [
+    { i: 0.4, ops: [] },
+    { i: 0.4, ops: [] },
+  ]
+  FAIRY.forEach((p, k) => {
+    const core = 1.3 + r() * 1
+    sets[k % 2].ops.push({ k: 'bulb', x: p.x, y: p.y, rx: 7, ry: 7, a: 1 }, { k: 'shape', d: circle(p.x, p.y, core), fill: '#fff4d0', a: 1 })
+  })
+  return sets
 }
+/** Where the fairy lights are, to size their canvases. */
+export const FAIRY_BOX: Art['box'] = [640, 380, 960, 790]
 
-export function fxLayer() {
+/** Sunbeams fanning out from the sun (centred on 0,0) and soft bokeh at the bottom corners after dark. */
+export function fx(): { rays: Art; bokeh: Art } {
   const r = rng(51)
   let rays = ''
   for (let i = 0; i < 6; i++) {
@@ -602,15 +721,18 @@ export function fxLayer() {
     const y = 820 + r() * 190
     bokeh += `<circle cx="${f(x)}" cy="${f(y)}" r="${f(14 + r() * 24)}" fill="url(#bokehG)" opacity="${(0.3 + r() * 0.35).toFixed(2)}"/>`
   }
-  return `<svg class="layer fx" ${VB} aria-hidden="true">
-<defs>
-<linearGradient id="rayG" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff4d2" stop-opacity=".5"/><stop offset=".6" stop-color="#fff4d2" stop-opacity=".12"/><stop offset="1" stop-color="#fff4d2" stop-opacity="0"/></linearGradient>
-<filter id="raySoft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="14"/></filter>
-<radialGradient id="bokehG"><stop offset="0" stop-color="#ffd27a" stop-opacity=".42"/><stop offset=".72" stop-color="#ffcb6e" stop-opacity=".3"/><stop offset="1" stop-color="#ffcb6e" stop-opacity="0"/></radialGradient>
-</defs>
-<g class="rays"><g filter="url(#raySoft)">${rays}</g></g>
-<g class="bokeh">${bokeh}</g>
-</svg>`
+  return {
+    rays: {
+      defs: `<linearGradient id="rayG" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff4d2" stop-opacity=".5"/><stop offset=".6" stop-color="#fff4d2" stop-opacity=".12"/><stop offset="1" stop-color="#fff4d2" stop-opacity="0"/></linearGradient><filter id="raySoft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="14"/></filter>`,
+      body: `<g filter="url(#raySoft)">${rays}</g>`,
+      box: [-1350, -760, 10, 660],
+    },
+    bokeh: {
+      defs: `<radialGradient id="bokehG"><stop offset="0" stop-color="#ffd27a" stop-opacity=".42"/><stop offset=".72" stop-color="#ffcb6e" stop-opacity=".3"/><stop offset="1" stop-color="#ffcb6e" stop-opacity="0"/></radialGradient>`,
+      body: bokeh,
+      box: [0, 780, 1600, 1050],
+    },
+  }
 }
 
 /** Fireflies: an HTML layer so they can drift anywhere and gather into a heart. */

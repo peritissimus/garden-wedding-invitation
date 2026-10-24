@@ -1,7 +1,7 @@
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { C, RINGS } from '../art/rose'
-import { TEMPO } from './tempo'
+import { TEMPO, blur } from './tempo'
 
 interface IntroOptions {
   reduced: boolean
@@ -74,7 +74,7 @@ export function setupIntro({ reduced, hero }: IntroOptions) {
     gsap.from('.intro-copy > *', {
       y: 8,
       autoAlpha: 0,
-      filter: 'blur(4px)',
+      ...blur(4),
       duration: 0.6 * TEMPO.opening,
       ease: 'emilOut',
       stagger: 0.08 * TEMPO.opening,

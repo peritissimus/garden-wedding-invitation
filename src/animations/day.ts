@@ -1,23 +1,28 @@
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { mountStage, type Layout, type Sky } from '../stage'
 
 /*
- * The garden at five moments of the day. Each moment sets the sky, the sun
- * and moon, the clouds, how much of the warm (sunset) and moonlit versions of
- * the painted land show over daylight, which lights are on, and where the
- * camera is.
+ * The garden at five moments of the day. Each moment sets the sky, where the
+ * sun and moon are and how they're lit, the clouds, how much of the warm
+ * (sunset) and moonlit versions of the painted land show over daylight, which
+ * lights are on, and where the camera is.
  *
- * Everything is tweened directly on the few elements that change — never via
- * inherited CSS variables on the stage, which would re-style thousands of
- * leaves and petals every scroll frame.
+ * The scenery is painted once into canvases (stage.ts), so scrolling only
+ * moves and fades them — transforms and opacity, which the GPU composites
+ * without repainting anything. The sky gradient and the lights are the only
+ * things redrawn, and both are tiny.
  */
 interface Moment {
   sky: [string, string, string]
-  sun: { x: number; y: number; disc: string; glow: string }
+  sun: { x: number; y: number; o: number }
+  /** the painted sun's colour as a blend of its day, golden and sunset versions (weights sum to 1) */
+  sunLook: [day: number, golden: number, sunset: number]
   rays: number
   moon: { x: number; y: number; o: number }
   stars: number
-  clouds: { top: string; bottom: string; o: number }
+  /** cloud opacity, and their colour as a blend of day, golden, sunset, dusk and night versions (weights sum to 1) */
+  clouds: { o: number; look: [number, number, number, number, number] }
   birds: number
   /** 0 = daylight, 1 = full warm (sunset) look */
   warm: number
@@ -34,11 +39,12 @@ interface Moment {
 
 const AFTERNOON: Moment = {
   sky: ['#b9d7ea', '#e3eef1', '#fbf2e2'],
-  sun: { x: 1230, y: 230, disc: '#fff9e6', glow: '#ffeec2' },
+  sun: { x: 1230, y: 230, o: 1 },
+  sunLook: [1, 0, 0],
   rays: 0.18,
   moon: { x: 380, y: 820, o: 0 },
   stars: 0,
-  clouds: { top: '#ffffff', bottom: '#dde7ee', o: 0.95 },
+  clouds: { o: 0.95, look: [1, 0, 0, 0, 0] },
   birds: 0.75,
   warm: 0,
   moonMix: 0,
@@ -55,9 +61,10 @@ const HERO: Moment = { ...AFTERNOON, cam: 0.94, camY: 280 }
 const GOLDEN: Moment = {
   ...AFTERNOON,
   sky: ['#e9cfb2', '#f7dfc0', '#ffdca6'],
-  sun: { x: 1180, y: 420, disc: '#ffe6a3', glow: '#ffcf7a' },
+  sun: { x: 1180, y: 420, o: 1 },
+  sunLook: [0, 1, 0],
   rays: 0.6,
-  clouds: { top: '#fff6e6', bottom: '#efc8a2', o: 0.9 },
+  clouds: { o: 0.9, look: [0, 1, 0, 0, 0] },
   birds: 0.9,
   warm: 0.45,
   petals: 0.7,
@@ -67,9 +74,10 @@ const GOLDEN: Moment = {
 const SUNSET: Moment = {
   ...GOLDEN,
   sky: ['#8d6c9c', '#e3938a', '#fbb878'],
-  sun: { x: 1120, y: 640, disc: '#ffbb73', glow: '#ff9566' },
+  sun: { x: 1120, y: 640, o: 1 },
+  sunLook: [0, 0, 1],
   rays: 0.4,
-  clouds: { top: '#f9c6b0', bottom: '#b77f96', o: 0.85 },
+  clouds: { o: 0.85, look: [0, 0, 1, 0, 0] },
   birds: 0.45,
   warm: 1,
   lights: 0.12,
@@ -80,11 +88,11 @@ const SUNSET: Moment = {
 const DUSK: Moment = {
   ...SUNSET,
   sky: ['#262a5c', '#5c4d84', '#c58693'],
-  sun: { x: 1080, y: 790, disc: '#ff9a76', glow: '#e9747a' },
+  sun: { x: 1080, y: 790, o: 0.8 },
   rays: 0,
   moon: { x: 400, y: 380, o: 0.65 },
   stars: 0.4,
-  clouds: { top: '#7f73a3', bottom: '#4b4577', o: 0.6 },
+  clouds: { o: 0.6, look: [0, 0, 0, 1, 0] },
   birds: 0,
   moonMix: 0.62,
   lights: 1,
@@ -95,10 +103,10 @@ const DUSK: Moment = {
 const NIGHT: Moment = {
   ...DUSK,
   sky: ['#0a1030', '#171f48', '#30366a'],
-  sun: { x: 1060, y: 920, disc: '#ff9a76', glow: '#e9747a' },
+  sun: { x: 1060, y: 920, o: 0 },
   moon: { x: 420, y: 200, o: 1 },
   stars: 1,
-  clouds: { top: '#2c335e', bottom: '#1d2348', o: 0.16 },
+  clouds: { o: 0.16, look: [0, 0, 0, 0, 1] },
   moonMix: 1,
   bokeh: 0.9,
   fireflies: 1,
@@ -106,62 +114,57 @@ const NIGHT: Moment = {
   cam: 1.1,
 }
 
-/** Scene units → px for the `slice`-scaled artwork. */
-const unit = () => Math.max(innerWidth / 1600, innerHeight / 1000)
-
 function targets(stage: HTMLElement) {
-  const q = <T extends Element>(s: string) => stage.querySelector<T>(s)!
-  const qa = <T extends Element>(s: string) => [...stage.querySelectorAll<T>(s)]
+  const q = (s: string) => stage.querySelector<HTMLElement>(s)!
+  const qa = (s: string) => [...stage.querySelectorAll<HTMLElement>(s)]
   return {
-    sky: q<HTMLElement>('.sky'),
-    sun: q('.celestial .sun'),
-    sunDisc: q('.celestial .sun-disc'),
-    sunGlow: qa('#sunGlow stop'),
-    moon: q('.celestial .moon'),
-    stars: q('.celestial .night-sky'),
-    cloudStops: qa('#cloudG stop'),
+    /** sky colours and lights, drawn onto canvases by the stage */
+    paint: { skyTop: '', skyMid: '', skyBottom: '', lights: 0 } as Sky,
+    stars: q('.stars'),
+    sun: q('.sun'),
+    sunLooks: qa('.sun .slot'),
+    moon: q('.moon'),
     clouds: q('.clouds'),
+    cloudLooks: qa('.cloud-band .slot'),
     birds: q('.birds'),
-    warm: qa('.land-warm'),
-    moonlit: qa('.land-moon'),
-    glows: qa<SVGSVGElement>('.layer.glow'),
-    rays: q('.fx .rays'),
-    bokeh: q('.fx .bokeh'),
+    warm: qa('.look.warm'),
+    moonlit: qa('.look.moon'),
+    rays: q('.rays'),
+    bokeh: q('.bokeh'),
     fireflies: q('.fireflies'),
     vignette: q('.vignette'),
-    petals: q('.petals'),
+    petals: q('.petals-day'),
     cams: [
-      [q<HTMLElement>('.cam-back'), 0.92, 0.6],
-      [q<HTMLElement>('.cam-front'), 1, 1],
-      [q<HTMLElement>('.cam-fg'), 1.2, 1.3],
+      [q('.cam-back'), 0.92, 0.6],
+      [q('.cam-front'), 1, 1],
+      [q('.cam-fg'), 1.2, 1.3],
     ] as [HTMLElement, number, number][],
   }
 }
 type Targets = ReturnType<typeof targets>
 
 /** Every property a moment controls, as plain values per target. */
-function frame(t: Targets, m: Moment, u: number) {
+function frame(t: Targets, m: Moment, L: Layout) {
+  const X = (x: number) => L.ox + x * L.u
+  const Y = (y: number) => L.oy + y * L.u
   const out: [gsap.TweenTarget, gsap.TweenVars][] = [
-    [t.sky, { '--sky-top': m.sky[0], '--sky-mid': m.sky[1], '--sky-bottom': m.sky[2] }],
-    [t.sun, { x: m.sun.x, y: m.sun.y }],
-    [t.sunDisc, { fill: m.sun.disc }],
-    [t.sunGlow, { stopColor: m.sun.glow }],
-    [t.moon, { x: m.moon.x, y: m.moon.y, opacity: m.moon.o }],
+    [t.paint, { skyTop: m.sky[0], skyMid: m.sky[1], skyBottom: m.sky[2], lights: m.lights }],
     [t.stars, { opacity: m.stars }],
-    [t.cloudStops[0], { stopColor: m.clouds.top }],
-    [t.cloudStops[1], { stopColor: m.clouds.bottom }],
+    [t.sun, { x: X(m.sun.x), y: Y(m.sun.y), opacity: m.sun.o }],
+    [t.moon, { x: X(m.moon.x), y: Y(m.moon.y), opacity: m.moon.o }],
     [t.clouds, { opacity: m.clouds.o }],
     [t.birds, { opacity: m.birds }],
     [t.warm, { opacity: m.warm }],
     [t.moonlit, { opacity: m.moonMix }],
-    [t.glows, { '--lights': m.lights }],
-    [t.rays, { x: m.sun.x, y: m.sun.y, opacity: m.rays }],
+    [t.rays, { x: X(m.sun.x), y: Y(m.sun.y), opacity: m.rays }],
     [t.bokeh, { opacity: m.bokeh }],
     [t.fireflies, { opacity: m.fireflies }],
     [t.vignette, { opacity: m.night * 0.7 }],
-    [t.petals, { '--petals': m.petals }],
+    [t.petals, { opacity: m.petals }],
   ]
-  for (const [el, k, s] of t.cams) out.push([el, { y: m.camY * u * k, scale: 1 + (m.cam - 1) * s }])
+  t.sunLooks.forEach((el, i) => out.push([el, { opacity: m.sunLook[i] }]))
+  t.cloudLooks.forEach((el, i) => out.push([el, { opacity: m.clouds.look[i] }]))
+  for (const [el, k, s] of t.cams) out.push([el, { y: m.camY * L.u * k, scale: 1 + (m.cam - 1) * s }])
   return out
 }
 
@@ -171,15 +174,17 @@ function frame(t: Targets, m: Moment, u: number) {
  * the light — ceremony in golden hour, cocktails at sunset, the string lights
  * come on for dinner, and the fireflies and stars arrive for dancing.
  */
-export function setupDay(stage: HTMLElement, reduced: boolean) {
+export function setupDay(el: HTMLElement, reduced: boolean) {
   const root = document.documentElement
-  const t = targets(stage)
+  const stage = mountStage(el)
+  const t = targets(el)
   const place = () => {
-    const u = unit()
-    for (const [el] of t.cams) gsap.set(el, { transformOrigin: `50% ${innerHeight - 240 * u}px` })
-    return u
+    const L = stage.layout
+    for (const [cam] of t.cams) gsap.set(cam, { transformOrigin: `50% ${L.h - 240 * L.u}px` })
+    return L
   }
   for (const [target, vars] of frame(t, HERO, place())) gsap.set(target, vars)
+  stage.update(t.paint)
 
   const events = [...document.querySelectorAll<HTMLElement>('.event')]
   const moments = [GOLDEN, SUNSET, DUSK, NIGHT]
@@ -194,21 +199,21 @@ export function setupDay(stage: HTMLElement, reduced: boolean) {
   const build = () => {
     const progress = trigger?.progress ?? 0
     trigger?.kill()
-    const u = place()
+    const L = place()
     const max = Math.max(1, root.scrollHeight - innerHeight)
     const centre = (el: HTMLElement) => {
       const top = el.getBoundingClientRect().top + scrollY
       return Math.min(1, Math.max(0, (top + el.offsetHeight / 2 - innerHeight / 2) / max))
     }
-    const tl = gsap.timeline({ paused: true, defaults: { ease: 'none' } })
+    const tl = gsap.timeline({ paused: true, defaults: { ease: 'none' }, onUpdate: () => stage.update(t.paint) })
     let t0 = 0
     let from = HERO
     for (const [el, to] of stops) {
       if (!el) continue
       const at = centre(el)
       if (at > t0) {
-        const a = frame(t, from, u)
-        const b = frame(t, to, u)
+        const a = frame(t, from, L)
+        const b = frame(t, to, L)
         a.forEach(([target, vars], i) => tl.fromTo(target, { ...vars }, { ...b[i][1], duration: at - t0, immediateRender: false }, t0))
       }
       t0 = Math.max(t0, at)
@@ -219,10 +224,14 @@ export function setupDay(stage: HTMLElement, reduced: boolean) {
     trigger = ScrollTrigger.create({ animation: tl, start: 0, end: 'max', scrub: reduced ? true : 0.8 })
   }
   build()
+  // The stage is sized to the large viewport, so a phone's toolbar sliding
+  // away doesn't resize it; only a real change (rotation, a resized window)
+  // repaints the scenery and re-places everything.
   let timer = 0
   addEventListener('resize', () => {
     clearTimeout(timer)
     timer = window.setTimeout(() => {
+      if (!stage.refit()) return
       build()
       ScrollTrigger.refresh()
     }, 250)
@@ -249,7 +258,7 @@ export function setupDay(stage: HTMLElement, reduced: boolean) {
 
   // A little pointer parallax on desktop: nearer layers drift more.
   if (!reduced && matchMedia('(hover: hover) and (pointer: fine)').matches) {
-    const layers = [...stage.querySelectorAll<HTMLElement>('.px')].map((el) => {
+    const layers = [...el.querySelectorAll<HTMLElement>('.px')].map((el) => {
       const depth = Number(el.dataset.depth)
       return {
         depth,

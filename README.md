@@ -46,19 +46,21 @@ vercel deploy --prod --scope peritissimus-projects
 src/
   config.ts              # all invitation content
   render.ts              # page markup
+  stage.ts               # paints the garden once into canvases; scrolling then only
+                         # moves and fades them (plus a tiny sky and the lights)
   main.ts                # entry: countdown, calendar, RSVP wiring
   art/                   # hand-built SVG artwork (no image files)
     rose.ts              # the rosebud that blooms (five rings of petals)
     scene.ts             # the garden in depth layers: sky, hills, glasshouse, trees,
                          # hedges, lawn, chairs, the rose arch, blurred foreground,
-                         # light glows; plus warm/moonlit colour-matrix copies
+                         # lights; plus the warm/moonlit colour matrices
     ornaments.ts         # wreath, flourish, glasshouse, icons, swatches, petals
     defs.ts              # shared gradients + watercolour filters
   animations/
     ease.ts              # Emil Kowalski's custom curves (CustomEase)
     intro.ts             # tap-or-scroll bloom and dive into the light
     day.ts               # scroll-driven time of day: sky, sun/moon, light and
-                         # warm/moonlit cross-fades (opacity only — no per-frame filters)
+                         # warm/moonlit cross-fades (transform and opacity only)
     hero.ts              # ink-written names
     sections.ts          # card reveals, line drawings, firefly heart, shooting star
   lib/                   # date formatting, calendar export
@@ -73,7 +75,10 @@ Timings follow Emil Kowalski's design-engineering guidelines:
   screen uses a strong ease-in-out; no `ease-in` on UI.
 - Text reveals are 450–600ms with 18–60ms staggers and fire just before the
   element is in view, so nothing waits on the reader.
-- Only the timeline vine is scroll-scrubbed; everything else plays once.
+- Only the garden's time of day is scroll-scrubbed; everything else plays once.
+- The garden is painted once into canvases (at most 2× pixel density), so
+  scrolling only moves and fades bitmaps — no repainting, even on phones. On
+  touch screens text reveals skip the blur, which costs an offscreen pass per word.
 - Buttons press to `scale(.97)`; hover effects are gated behind
   `(hover: hover) and (pointer: fine)`.
 - Petals and swaying botanicals are CSS-only (transform + opacity) and pause

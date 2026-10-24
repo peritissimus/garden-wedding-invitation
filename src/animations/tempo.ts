@@ -9,5 +9,12 @@ export const TEMPO = {
   reveal: 1.35,
 }
 
+/**
+ * Blur-in reveals only where they're cheap. On a phone every blurred word is
+ * its own offscreen pass, so there text simply rises and fades.
+ */
+const SOFT = matchMedia('(hover: hover) and (pointer: fine)').matches
+export const blur = (px: number) => (SOFT ? { filter: `blur(${px}px)` } : {})
+
 /** Play an animation at the reveal tempo (scales its duration and staggers). */
 export const slow = <T extends gsap.core.Animation>(a: T): T => a.timeScale(1 / TEMPO.reveal) as T
