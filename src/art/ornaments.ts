@@ -196,7 +196,7 @@ export function iconFor(item: ScheduleItem): IconName {
 }
 
 export const icon = (item: ScheduleItem) =>
-  `<svg class="t-icon t-reveal" viewBox="0 0 40 40" aria-hidden="true">${ICONS[iconFor(item)]}</svg>`
+  `<svg class="t-icon" viewBox="0 0 40 40" aria-hidden="true">${ICONS[iconFor(item)]}</svg>`
 
 /** Open envelope; a heart rises out of it. */
 export const rsvpArt = () =>

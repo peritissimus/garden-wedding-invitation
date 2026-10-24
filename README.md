@@ -52,7 +52,7 @@ src/
     ease.ts              # Emil Kowalski's custom curves (CustomEase)
     intro.ts             # tap-or-scroll envelope opening
     hero.ts              # ink-written names, botanicals growing in
-    sections.ts          # reveals, line drawings, timeline vine, count-up
+    sections.ts          # reveals, line drawings, timeline vine
   lib/                   # date formatting, calendar export
   styles/main.css
 ```
@@ -63,14 +63,21 @@ Timings follow Emil Kowalski's design-engineering guidelines:
 
 - Entrances use a strong ease-out (`cubic-bezier(.23, 1, .32, 1)`), movement on
   screen uses a strong ease-in-out; no `ease-in` on UI.
-- Text reveals are 450–600ms with 18–60ms staggers and fire just before the
-  element is in view, so nothing waits on the reader.
-- Only the timeline vine is scroll-scrubbed; everything else plays once.
+- Native scrolling: nothing trails behind the guest's finger. Scroll-linked
+  pieces move directly with the scroll.
+- Cards are always there — never hidden until you reach them. Text settles in
+  over 300ms on desktops; on touch screens, where a flick outruns any fade, text
+  and numbers are simply shown. No word-by-word text or rolling numbers.
+- Line drawings and icons draw in 0.6–0.8s with no delays, and nothing grows
+  from nothing (entrances start at 0.6–0.85 scale with opacity).
+- Only the timeline vine and the botanical depth layers are scroll-linked;
+  everything else plays once.
 - Buttons press to `scale(.97)`; hover effects are gated behind
   `(hover: hover) and (pointer: fine)`.
 - Petals and swaying botanicals are CSS-only (transform + opacity) and pause
   when off screen.
-- Native scrolling (no smooth-scroll library). The opening can always be cut
-  short: a fresh scroll, swipe, tap or key press plays the rest quickly.
-- Pacing lives in `src/animations/tempo.ts` (`opening` and `reveal`; higher = slower).
+- The opening can always be cut short: a fresh scroll, swipe, tap or key press
+  plays the rest quickly.
+- Pacing lives in `src/animations/tempo.ts`: `opening` (the envelope ceremony,
+  slowed at the couple's request) and `reveal` (kept at 1).
 - `prefers-reduced-motion`: no movement, opacity fades only.

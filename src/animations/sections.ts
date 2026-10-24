@@ -2,7 +2,7 @@ import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { leaf } from '../art/util'
 import { growFlora, prepareFlora } from './hero'
-import { TEMPO, slow } from './tempo'
+import { TOUCH, slow } from './tempo'
 
 const $ = <T extends Element = HTMLElement>(s: string, root: ParentNode = document) => root.querySelector<T>(s)
 const $$ = <T extends Element = HTMLElement>(s: string, root: ParentNode = document) => [...root.querySelectorAll<T>(s)]
@@ -15,14 +15,12 @@ const hideStroke = (els: Element[]) => gsap.set(els, { strokeDasharray: 1, strok
 const DRAW = { strokeDashoffset: 0, ease: 'power2.inOut' }
 
 export function setupSections(reduced: boolean) {
-  document.documentElement.style.setProperty('--tempo', String(TEMPO.reveal))
   reveals(reduced)
   timeline(reduced)
   if (reduced) {
     document.querySelectorAll('.ink').forEach((n) => n.classList.add('inked'))
     return
   }
-  words()
   flourishes()
   wreath()
   dateMark()
@@ -30,36 +28,29 @@ export function setupSections(reduced: boolean) {
   palette()
   rsvp()
   footer()
-  countUp()
   parallax()
 }
 
-/** Headings, labels, buttons: 600ms strong ease-out, 12px + light blur, 60ms stagger. */
+/**
+ * Text settles in over 300ms as it comes on screen — a fade and a few pixels
+ * of rise — so it's done before you get to it. On touch screens, where a flick
+ * outruns any fade, it is simply there.
+ */
 function reveals(reduced: boolean) {
+  if (!reduced && TOUCH) return
   const els = $$('.reveal')
-  gsap.set(els, reduced ? { autoAlpha: 0 } : { autoAlpha: 0, y: 12, filter: 'blur(4px)' })
+  gsap.set(els, reduced ? { autoAlpha: 0 } : { autoAlpha: 0, y: 8 })
   ScrollTrigger.batch(els, {
-    start: 'top 92%',
+    start: 'top bottom',
     once: true,
     onEnter: (batch) =>
       slow(gsap.to(
         batch,
         reduced
-          ? { autoAlpha: 1, duration: 0.3, ease: 'none', stagger: 0.04 }
-          : { autoAlpha: 1, y: 0, filter: 'blur(0px)', duration: 0.6, ease: 'emilOut', stagger: 0.06, clearProps: 'filter,transform' },
+          ? { autoAlpha: 1, duration: 0.3, ease: 'emilOut', stagger: 0.04 }
+          : { autoAlpha: 1, y: 0, duration: 0.3, ease: 'emilOut', stagger: 0.04, clearProps: 'transform' },
       )),
   })
-}
-
-/** Love letter: words ink in left to right — the whole paragraph in under a second. */
-function words() {
-  const box = $('.words')
-  if (!box) return
-  const ws = $$('.word', box)
-  gsap.set(ws, { autoAlpha: 0, y: 6, filter: 'blur(3px)' })
-  once(box, 'top 88%', () =>
-    slow(gsap.to(ws, { autoAlpha: 1, y: 0, filter: 'blur(0px)', duration: 0.45, ease: 'emilOut', stagger: 0.018, clearProps: 'filter,transform' })),
-  )
 }
 
 function flourishes() {
@@ -67,7 +58,7 @@ function flourishes() {
     const paths = $$('.draw', svg)
     const pop = $('.pop', svg)
     hideStroke(paths)
-    gsap.set(pop, { scale: 0.5, autoAlpha: 0, transformOrigin: '50% 50%' })
+    gsap.set(pop, { scale: 0.8, autoAlpha: 0, transformOrigin: '50% 50%' })
     const tl = slow(gsap.timeline({ paused: true }))
       .to(pop, { scale: 1, autoAlpha: 1, duration: 0.45, ease: 'emilOut' }, 0)
       .to(paths, { ...DRAW, duration: 0.9, stagger: 0.05 }, 0.08)
@@ -82,8 +73,9 @@ function wreath() {
   const berries = $$<SVGElement>('.dot', svg)
   const mono = $('.wreath-mono', svg)
   hideStroke($$('.stem', svg))
-  gsap.set(leaves, { scale: 0.3, autoAlpha: 0, transformOrigin: '0% 50%' })
-  gsap.set(berries, { scale: 0.5, autoAlpha: 0, transformOrigin: '50% 50%' })
+  // leaves unfurl from their stems rather than from nothing
+  gsap.set(leaves, { scale: 0.6, autoAlpha: 0, transformOrigin: '0% 50%' })
+  gsap.set(berries, { scale: 0.7, autoAlpha: 0, transformOrigin: '50% 50%' })
   gsap.set(mono, { autoAlpha: 0, y: 4 })
   const tl = slow(gsap.timeline({ paused: true })).to($$('.stem', svg), { ...DRAW, duration: 1.1 }, 0)
   ;[...leaves, ...berries].forEach((el) => tl.to(el, { scale: 1, autoAlpha: 1, duration: 0.4, ease: 'emilOut' }, 0.08 + Number(el.dataset.t) * 0.95))
@@ -96,7 +88,7 @@ function dateMark() {
   const path = $('.circle-mark .draw')
   if (!path) return
   hideStroke([path])
-  once(path.closest('h2')!, 'top 90%', () => slow(gsap.to(path, { ...DRAW, duration: 0.8, delay: 0.35 })))
+  once(path.closest('h2')!, 'top 92%', () => slow(gsap.to(path, { ...DRAW, duration: 0.7 })))
 }
 
 /**
@@ -127,13 +119,13 @@ function timeline(reduced: boolean) {
     svg.style.height = `${h}px`
     svg.innerHTML = `<path class="vine-base" d="${d}"/><path class="vine-grow" pathLength="1" d="${d}"/>${ls}`
     grow = svg.querySelector('.vine-grow')
-    growTo = grow && !reduced ? gsap.quickTo(grow, 'strokeDashoffset', { duration: 0.35, ease: 'power3.out' }) : null
+    growTo = grow && !reduced ? gsap.quickTo(grow, 'strokeDashoffset', { duration: 0.15, ease: 'power3.out' }) : null
     leaves = [...svg.querySelectorAll<SVGElement>('.vleaf')]
     marks = items.map((it) => (it.offsetTop + 19) / h)
   }
 
   const icons = (it: Element) => {
-    if (!reduced) slow(gsap.to($$('.t-icon .draw', it), { ...DRAW, duration: 0.7, stagger: 0.08, delay: 0.1 }))
+    if (!reduced) slow(gsap.to($$('.t-icon .draw', it), { ...DRAW, duration: 0.6, stagger: 0.06 }))
   }
 
   const update = (p: number) => {
@@ -184,11 +176,11 @@ function palette() {
   if (!chips.length) return
   const dots = chips.map((c) => c.querySelector('.swatch')!)
   const labels = chips.map((c) => c.querySelector('span')!)
-  gsap.set(dots, { scale: 0.6, rotation: -25, autoAlpha: 0 })
+  gsap.set(dots, { scale: 0.85, rotation: -10, autoAlpha: 0 })
   gsap.set(labels, { autoAlpha: 0, y: 4 })
   once(chips[0].parentElement!, 'top 90%', () => {
     slow(gsap.to(dots, { scale: 1, rotation: 0, autoAlpha: 1, duration: 0.6, ease: 'emilOut', stagger: 0.06, clearProps: 'transform' }))
-    slow(gsap.to(labels, { autoAlpha: 1, y: 0, duration: 0.45, ease: 'emilOut', stagger: 0.06, delay: 0.15, clearProps: 'transform' }))
+    slow(gsap.to(labels, { autoAlpha: 1, y: 0, duration: 0.3, ease: 'emilOut', stagger: 0.06, delay: 0.08, clearProps: 'transform' }))
   })
 }
 
@@ -224,25 +216,6 @@ function footer() {
   )
 }
 
-/** Countdown rolls up from zero once, then ticks normally. */
-function countUp() {
-  const el = $('#countdown')
-  if (!el) return
-  once(el, 'top 92%', () => {
-    $$('strong', el).forEach((s, i) => {
-      const target = Number(s.textContent) || 0
-      const o = { v: 0 }
-      slow(gsap.to(o, {
-        v: target,
-        duration: 1.1,
-        delay: i * 0.06,
-        ease: 'expo.out',
-        onUpdate: () => (s.textContent = String(Math.round(o.v)).padStart(2, '0')),
-      }))
-    })
-  })
-}
-
 /** Depth: botanical layers drift at different speeds; hero copy eases away. */
 function parallax() {
   $$('.flora').forEach((svg) => {
@@ -255,13 +228,13 @@ function parallax() {
       ['.layer-front', 90],
     ]
     layers.forEach(([sel, y]) =>
-      gsap.to($(sel, svg), { y, ease: 'none', scrollTrigger: { trigger: section, start, end: 'bottom top', scrub: 0.4 } }),
+      gsap.to($(sel, svg), { y, ease: 'none', scrollTrigger: { trigger: section, start, end: 'bottom top', scrub: true } }),
     )
   })
   gsap.to('.hero-copy', {
     yPercent: -10,
     autoAlpha: 0.25,
     ease: 'none',
-    scrollTrigger: { trigger: '#hero', start: 'top top', end: 'bottom top', scrub: 0.4 },
+    scrollTrigger: { trigger: '#hero', start: 'top top', end: 'bottom top', scrub: true },
   })
 }

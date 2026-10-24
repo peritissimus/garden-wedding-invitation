@@ -77,10 +77,7 @@ export function render(root: HTMLElement) {
   ${wreath(esc(config.partnerOne[0] ?? ''), esc(config.partnerTwo[0] ?? ''))}
   <p class="eyebrow reveal">A little love letter</p>
   <h2 class="reveal">Our favourite day${many ? 's' : ''},<br><em>with our favourite people</em></h2>
-  <p class="lead words">${config.message
-    .split(' ')
-    .map((w) => `<span class="word">${esc(w)}</span>`)
-    .join(' ')}</p>
+  <p class="lead reveal">${esc(config.message)}</p>
 </section>
 
 <section class="when grain" id="when">
@@ -107,8 +104,8 @@ export function render(root: HTMLElement) {
           (s) => `<li class="t-item">
         <span class="t-dot" aria-hidden="true"></span>
         ${icon(s)}
-        <time class="t-reveal">${fmtTime(eventStart(s))}${many ? `<small>${esc(fmtWeekday(s.date))}</small>` : ''}</time>
-        <div class="t-body t-reveal"><h3>${esc(s.title)}</h3>${s.note ? `<p>${esc(s.note)}</p>` : ''}</div>
+        <time>${fmtTime(eventStart(s))}${many ? `<small>${esc(fmtWeekday(s.date))}</small>` : ''}</time>
+        <div class="t-body"><h3>${esc(s.title)}</h3>${s.note ? `<p>${esc(s.note)}</p>` : ''}</div>
       </li>`,
         )
         .join('')}

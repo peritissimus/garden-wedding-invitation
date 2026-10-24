@@ -16,8 +16,6 @@
   /* Emil Kowalski's curves */
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
-  /* set from TEMPO.reveal in animations/tempo.ts */
-  --tempo: 1;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -316,10 +314,10 @@ p { font-size: 20px; line-height: 1.75; margin: 0 auto; max-width: 34em; color: 
 .vleaf {
   fill: url(#olive);
   opacity: 0;
-  transform: scale(0.4);
+  transform: scale(0.6);
   transform-box: fill-box;
   transform-origin: 0% 50%;
-  transition: opacity calc(300ms * var(--tempo)) var(--ease-out), transform calc(450ms * var(--tempo)) var(--ease-out);
+  transition: opacity 250ms var(--ease-out), transform 250ms var(--ease-out);
 }
 .vleaf.on { opacity: 0.9; transform: none; }
 .t-item { position: relative; display: grid; grid-template-columns: 40px 104px 1fr; align-items: start; gap: 6px 18px; padding-left: 42px; }
@@ -332,7 +330,7 @@ p { font-size: 20px; line-height: 1.75; margin: 0 auto; max-width: 34em; color: 
   border-radius: 50%;
   background: var(--paper);
   border: 1px solid var(--line);
-  transition: background-color calc(300ms * var(--tempo)) ease, border-color calc(300ms * var(--tempo)) ease, box-shadow calc(300ms * var(--tempo)) var(--ease-out), transform calc(300ms * var(--tempo)) var(--ease-out);
+  transition: background-color 250ms ease, border-color 250ms ease, box-shadow 250ms var(--ease-out), transform 250ms var(--ease-out);
 }
 .t-item.lit .t-dot { background: var(--gold); border-color: var(--gold); box-shadow: 0 0 0 6px #a88b5a22; transform: scale(1.06); }
 .t-icon { width: 40px; height: 40px; overflow: visible; fill: none; stroke: var(--gold); stroke-width: 1.1; stroke-linecap: round; stroke-linejoin: round; }
@@ -340,15 +338,7 @@ p { font-size: 20px; line-height: 1.75; margin: 0 auto; max-width: 34em; color: 
 .t-item time small { display: block; margin-top: 2px; font: 400 10px/1.6 var(--sans); letter-spacing: 0.2em; text-transform: uppercase; color: var(--soft); }
 .t-body h3 { font: 400 11px/1.6 var(--sans); letter-spacing: 0.28em; text-transform: uppercase; margin: 9px 0 4px; }
 .t-body p { font-size: 18px; line-height: 1.5; margin: 0; color: var(--soft); font-style: italic; }
-.t-reveal {
-  opacity: 0;
-  transform: translateY(10px);
-  filter: blur(3px);
-  transition: opacity calc(500ms * var(--tempo)) var(--ease-out), transform calc(500ms * var(--tempo)) var(--ease-out), filter calc(500ms * var(--tempo)) var(--ease-out);
-}
-.t-item.seen .t-reveal { opacity: 1; transform: none; filter: none; }
-.t-item.seen time { transition-delay: calc(60ms * var(--tempo)); }
-.t-item.seen .t-body { transition-delay: calc(120ms * var(--tempo)); }
+/* each moment of the day is always there; the vine only lights its dot and draws its icon */
 
 /* Venue */
 .venue-art { display: block; width: min(340px, 86vw); height: auto; margin: 18px auto 8px; overflow: visible; }
@@ -408,7 +398,6 @@ p { font-size: 20px; line-height: 1.75; margin: 0 auto; max-width: 34em; color: 
 
 /* Reduced motion: no movement, keep gentle opacity changes. */
 .reduced .petals { display: none; }
-.reduced .t-reveal { transform: none; filter: none; }
 .reduced .vleaf { transform: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; }
