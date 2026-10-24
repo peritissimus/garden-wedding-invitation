@@ -329,6 +329,7 @@ html.is-dusk .btn.solid { color: #1a1c38; box-shadow: 0 0 0 6px #ffe1a01f, 0 0 4
    on wide screens so the arch stays in view */
 .event-card { display: grid; grid-template-columns: 64px 1fr; align-items: center; gap: 22px; width: min(440px, 100%); padding: 30px 34px; text-align: left; }
 .t-icon { width: 58px; height: 58px; overflow: visible; fill: none; stroke: var(--t-gold); stroke-width: 1.1; stroke-linecap: round; stroke-linejoin: round; }
+.ev-text .ev-day { margin: 0 0 2px; font: 400 10px/1.6 var(--sans); letter-spacing: 0.24em; text-transform: uppercase; font-style: normal; color: var(--t-soft); }
 .ev-text time { display: block; font: 300 40px/1.1 var(--serif); color: var(--t-ink); }
 .ev-text h3 { margin: 6px 0 4px; font: 400 11px/1.6 var(--sans); letter-spacing: 0.3em; text-transform: uppercase; color: var(--t-soft); }
 .ev-text p { margin: 0; font-size: 19px; font-style: italic; line-height: 1.5; color: var(--t-body); }

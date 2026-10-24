@@ -58,6 +58,20 @@ const AFTERNOON: Moment = {
 }
 /** The hero looks up at the sky; scrolling tilts the camera down onto the garden. */
 const HERO: Moment = { ...AFTERNOON, cam: 0.94, camY: 280 }
+/** Top of the rose arch's garland, in scene units. */
+const ARCH_TOP = 395
+
+/**
+ * The hero, with the camera tilted up far enough that the arch stays clear
+ * of the names and date — on short, wide screens (a laptop) the text takes
+ * up more of the height, so the garden has to sit lower.
+ */
+function heroFor(L: Layout, textBottom: number): Moment {
+  const origin = L.h - 240 * L.u
+  const arch = origin + (L.oy + ARCH_TOP * L.u - origin) * HERO.cam
+  const lift = Math.max(HERO.camY * L.u, textBottom + 28 - arch)
+  return { ...HERO, camY: lift / L.u }
+}
 const GOLDEN: Moment = {
   ...AFTERNOON,
   sky: ['#e9cfb2', '#f7dfc0', '#ffdca6'],
@@ -114,12 +128,45 @@ const NIGHT: Moment = {
   cam: 1.1,
 }
 
+/** First light on a new day: the moon going down, a rosy sky, the lights switched off. */
+const DAWN: Moment = {
+  ...GOLDEN,
+  sky: ['#9db3d8', '#f2cfc8', '#fde2c4'],
+  sun: { x: 1150, y: 600, o: 1 },
+  sunLook: [0, 0.4, 0.6],
+  rays: 0.3,
+  moon: { x: 420, y: 560, o: 0.35 },
+  stars: 0.12,
+  clouds: { o: 0.85, look: [0, 0.5, 0.5, 0, 0] },
+  birds: 0.3,
+  warm: 0.75,
+  moonMix: 0.25,
+  night: 0.12,
+  petals: 0.4,
+  cam: 1.06,
+}
+
+/** The day's light in order, for carrying on into the evening after the last celebration. */
+const EVENING = [AFTERNOON, GOLDEN, SUNSET, DUSK, NIGHT]
+
+/** The light at a celebration's real time of day (24h "HH:MM"). */
+function lightAt(time: string): Moment {
+  const [h, m] = time.split(':').map(Number)
+  const hour = h + m / 60
+  if (hour < 11) return GOLDEN // morning sun
+  if (hour < 16) return AFTERNOON
+  if (hour < 17.5) return GOLDEN
+  if (hour < 18.5) return SUNSET
+  if (hour < 19) return DUSK
+  return NIGHT
+}
+
 function targets(stage: HTMLElement) {
   const q = (s: string) => stage.querySelector<HTMLElement>(s)!
   const qa = (s: string) => [...stage.querySelectorAll<HTMLElement>(s)]
   return {
-    /** sky colours and lights, drawn onto canvases by the stage */
-    paint: { skyTop: '', skyMid: '', skyBottom: '', lights: 0 } as Sky,
+    /** sky colours and lights, drawn onto canvases by the stage; `night` sets the cards' theme */
+    paint: { skyTop: '', skyMid: '', skyBottom: '', lights: 0, night: 0 } as Sky & { night: number },
     stars: q('.stars'),
     sun: q('.sun'),
     sunLooks: qa('.sun .slot'),
@@ -148,7 +195,7 @@ function frame(t: Targets, m: Moment, L: Layout) {
   const X = (x: number) => L.ox + x * L.u
   const Y = (y: number) => L.oy + y * L.u
   const out: [gsap.TweenTarget, gsap.TweenVars][] = [
-    [t.paint, { skyTop: m.sky[0], skyMid: m.sky[1], skyBottom: m.sky[2], lights: m.lights }],
+    [t.paint, { skyTop: m.sky[0], skyMid: m.sky[1], skyBottom: m.sky[2], lights: m.lights, night: m.night }],
     [t.stars, { opacity: m.stars }],
     [t.sun, { x: X(m.sun.x), y: Y(m.sun.y), opacity: m.sun.o }],
     [t.moon, { x: X(m.moon.x), y: Y(m.moon.y), opacity: m.moon.o }],
@@ -170,9 +217,11 @@ function frame(t: Targets, m: Moment, L: Layout) {
 
 /**
  * Scroll is the clock: each section is pinned to a moment of the day and the
- * garden blends between them as you pass. The order of the day lines up with
- * the light — ceremony in golden hour, cocktails at sunset, the string lights
- * come on for dinner, and the fireflies and stars arrive for dancing.
+ * garden blends between them as you pass. Each celebration gets the light of
+ * its own hour — a morning haldi in golden sun, the string lights and
+ * fireflies for an evening sangeet — and when the next one is on a new day,
+ * dawn breaks in between. After the last one the day carries on into the
+ * evening, so the fireflies can gather at the RSVP under the stars.
  */
 export function setupDay(el: HTMLElement, reduced: boolean) {
   const root = document.documentElement
@@ -183,17 +232,41 @@ export function setupDay(el: HTMLElement, reduced: boolean) {
     for (const [cam] of t.cams) gsap.set(cam, { transformOrigin: `50% ${L.h - 240 * L.u}px` })
     return L
   }
-  for (const [target, vars] of frame(t, HERO, place())) gsap.set(target, vars)
-  stage.update(t.paint)
+  /** Each frame: the sky and lights, and dark-glass cards (and waking fireflies) whenever it's night. */
+  const paint = () => {
+    stage.update(t.paint)
+    root.classList.toggle('is-dusk', t.paint.night > 0.4)
+    root.classList.toggle('is-night', t.paint.night > 0.75)
+  }
+  /** How far down the hero's text reaches (it sits at the top of the page). */
+  const heroText = () => (document.querySelector('.hero .date-block')?.getBoundingClientRect().bottom ?? 0) + scrollY
+  const setHero = (L: Layout) => {
+    for (const [target, vars] of frame(t, heroFor(L, heroText()), L)) gsap.set(target, vars)
+    paint()
+  }
+  setHero(place())
 
+  const byId = (id: string) => document.getElementById(id)
   const events = [...document.querySelectorAll<HTMLElement>('.event')]
-  const moments = [GOLDEN, SUNSET, DUSK, NIGHT]
-  const stops: [HTMLElement | null, Moment][] = [
-    [document.getElementById('story'), AFTERNOON],
-    [document.getElementById('when'), GOLDEN],
-    ...events.map((el, i): [HTMLElement, Moment] => [el, moments[Math.min(i, moments.length - 1)]]),
-    [document.getElementById('footer'), NIGHT],
+  /** where each moment falls: on a section, or halfway between two (dawn) */
+  type Stop = { at: HTMLElement | [HTMLElement, HTMLElement] | null; m: Moment }
+  const stops: Stop[] = [
+    { at: byId('story'), m: AFTERNOON },
+    { at: byId('when'), m: AFTERNOON },
   ]
+  events.forEach((el, i) => {
+    const m = lightAt(el.dataset.time ?? '12:00')
+    const prev = events[i - 1]
+    if (prev && prev.dataset.date !== el.dataset.date && stops[stops.length - 1].m.night > 0.3) stops.push({ at: [prev, el], m: DAWN })
+    stops.push({ at: el, m })
+  })
+  const last = EVENING.indexOf(stops[stops.length - 1].m)
+  stops.push(
+    { at: byId('venue'), m: EVENING[Math.min(last + 1, 4)] },
+    { at: byId('attire'), m: EVENING[Math.min(last + 2, 4)] },
+    { at: byId('rsvp'), m: NIGHT },
+    { at: byId('footer'), m: NIGHT },
+  )
 
   let trigger: ScrollTrigger | null = null
   const build = () => {
@@ -205,12 +278,14 @@ export function setupDay(el: HTMLElement, reduced: boolean) {
       const top = el.getBoundingClientRect().top + scrollY
       return Math.min(1, Math.max(0, (top + el.offsetHeight / 2 - innerHeight / 2) / max))
     }
-    const tl = gsap.timeline({ paused: true, defaults: { ease: 'none' }, onUpdate: () => stage.update(t.paint) })
+    const position = (at: Stop['at']) => (Array.isArray(at) ? (centre(at[0]) + centre(at[1])) / 2 : centre(at!))
+    const tl = gsap.timeline({ paused: true, defaults: { ease: 'none' }, onUpdate: paint })
+    if (!progress) setHero(L)
     let t0 = 0
-    let from = HERO
-    for (const [el, to] of stops) {
-      if (!el) continue
-      const at = centre(el)
+    let from = heroFor(L, heroText())
+    for (const { at: where, m: to } of stops) {
+      if (!where) continue
+      const at = position(where)
       if (at > t0) {
         const a = frame(t, from, L)
         const b = frame(t, to, L)
@@ -238,23 +313,6 @@ export function setupDay(el: HTMLElement, reduced: boolean) {
   })
   document.fonts?.ready.then(build)
 
-  // Cards switch to dark glass once the sun has gone; fireflies wake for the dancing.
-  const dusk = events[2] ?? events[events.length - 1]
-  const night = events[3] ?? events[events.length - 1]
-  if (dusk)
-    ScrollTrigger.create({
-      trigger: dusk,
-      start: 'top 70%',
-      onEnter: () => root.classList.add('is-dusk'),
-      onLeaveBack: () => root.classList.remove('is-dusk'),
-    })
-  if (night)
-    ScrollTrigger.create({
-      trigger: night,
-      start: 'top 75%',
-      onEnter: () => root.classList.add('is-night'),
-      onLeaveBack: () => root.classList.remove('is-night'),
-    })
 
   // A little pointer parallax on desktop: nearer layers drift more.
   if (!reduced && matchMedia('(hover: hover) and (pointer: fine)').matches) {

@@ -100,6 +100,17 @@ export function venueArt() {
     .join('')}</g></svg>`
 }
 
+/** A marigold head: a ring of small bulging arcs. */
+function marigold(cx: number, cy: number, R: number, n: number) {
+  const r = 2 * R * Math.sin(Math.PI / n) * 0.62
+  let d = `M${f(cx + R)} ${f(cy)}`
+  for (let i = 1; i <= n; i++) {
+    const a = (i / n) * Math.PI * 2
+    d += `A${f(r)} ${f(r)} 0 0 1 ${f(cx + Math.cos(a) * R)} ${f(cy + Math.sin(a) * R)}`
+  }
+  return `${d}Z`
+}
+
 const ICONS: Record<IconName, string> = {
   rings: [circle(15.5, 24, 9), circle(24.5, 24, 9), 'M21.5 11.5 24.5 8l3 3.5-3 3.4z', 'M24.5 4.5V3M30 7l1-1M19 7l-1-1']
     .map((d) => draw(d))
@@ -116,6 +127,16 @@ const ICONS: Record<IconName, string> = {
     draw('M15.5 15 31 12') +
     draw(ellipse(12, 28.8, 3.8, 2.9), ' transform="rotate(-20 12 28.8)"') +
     draw(ellipse(27.5, 25, 3.8, 2.9), ' transform="rotate(-20 27.5 25)"'),
+  // a bowl of turmeric paste with a marigold and a drop of oil
+  haldi: [
+    'M6 22H34C34 29 28 34 20 34S6 29 6 22Z',
+    'M4.5 22H35.5',
+    'M10 22C12 17.5 28 17.5 30 22',
+    marigold(20, 11, 5, 10),
+    'M31 5.5c0 2-2 3-2 4.6a2 2 0 0 0 4 0c0-1.6-2-2.6-2-4.6Z',
+  ]
+    .map((d) => draw(d))
+    .join(''),
   sprig: ['M20 35V8', 'M20 16c-4-1-7-4-7-8 4 0 7 3 7 8Zm0 0c4-1 7-4 7-8-4 0-7 3-7 8Z', 'M20 26c-4-1-7-4-7-8 4 0 7 3 7 8Zm0 0c4-1 7-4 7-8-4 0-7 3-7 8Z']
     .map((d) => draw(d))
     .join(''),
@@ -124,10 +145,11 @@ const ICONS: Record<IconName, string> = {
 export function iconFor(item: ScheduleItem): IconName {
   if (item.icon) return item.icon
   const t = item.title.toLowerCase()
-  if (/ceremon|vow|church|wed/.test(t)) return 'rings'
+  if (/haldi|pithi|turmeric/.test(t)) return 'haldi'
+  if (/ceremon|vow|church|wed|phera|nikah|vivah/.test(t)) return 'rings'
   if (/cocktail|drink|toast|champagne|aperitif/.test(t)) return 'glasses'
   if (/dinner|lunch|meal|breakfast|feast|supper/.test(t)) return 'dinner'
-  if (/danc|party|music|band|dj/.test(t)) return 'music'
+  if (/danc|party|music|band|dj|sangeet|garba/.test(t)) return 'music'
   return 'sprig'
 }
 

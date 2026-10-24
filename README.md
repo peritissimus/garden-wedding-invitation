@@ -21,9 +21,12 @@ Live: https://garden-wedding-bloom.vercel.app
 
 ## Editing the invitation
 
-All content lives in [`src/config.ts`](src/config.ts): names, date, ceremony
-time, venue, schedule, dress code + colour palette, RSVP email and deadline.
-Set `sample: false` once the real details are in.
+All content lives in [`src/config.ts`](src/config.ts): names, the venue's time
+zone, the celebrations (each with its own date, time and note), which one is the
+main event (countdown + "Save the date"), venue, dress code + colour palette,
+RSVP email and deadline (leave the email empty to leave the RSVP button out).
+Times are shown as they are at the venue wherever guests open the invitation,
+and the countdown and calendar entries are correct in any time zone.
 
 ## Development
 
