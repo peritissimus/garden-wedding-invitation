@@ -49,13 +49,16 @@ src/
   main.ts                # entry: countdown, calendar, RSVP wiring
   art/                   # hand-built SVG artwork (no image files)
     rose.ts              # the rosebud that blooms (five rings of petals)
-    scene.ts             # the garden: arch, aisle, chairs, lights, hills, sky
+    scene.ts             # the garden in depth layers: sky, hills, glasshouse, trees,
+                         # hedges, lawn, chairs, the rose arch, blurred foreground,
+                         # light glows; plus warm/moonlit colour-matrix copies
     ornaments.ts         # wreath, flourish, glasshouse, icons, swatches, petals
     defs.ts              # shared gradients + watercolour filters
   animations/
     ease.ts              # Emil Kowalski's custom curves (CustomEase)
     intro.ts             # tap-or-scroll bloom and dive into the light
-    day.ts               # scroll-driven time of day (five palettes)
+    day.ts               # scroll-driven time of day: sky, sun/moon, light and
+                         # warm/moonlit cross-fades (opacity only — no per-frame filters)
     hero.ts              # ink-written names
     sections.ts          # card reveals, line drawings, firefly heart, shooting star
   lib/                   # date formatting, calendar export

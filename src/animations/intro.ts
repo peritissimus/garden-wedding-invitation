@@ -126,6 +126,7 @@ export function setupIntro({ reduced, hero }: IntroOptions) {
     const tl = gsap.timeline({ defaults: { ease: 'emilOut' } })
 
     if (reduced) {
+      root.classList.add('show-stage')
       tl.to(intro, { autoAlpha: 0, duration: 0.5, ease: 'none' }, 0).add(hero(), 0).call(finish, [], 0.5)
       return
     }
@@ -143,6 +144,7 @@ export function setupIntro({ reduced, hero }: IntroOptions) {
       // fall into its golden heart — the light becomes the afternoon sun
       .to('.rose-zoom', { scale: 16, svgOrigin: ORIGIN, duration: 1.3, ease: 'power2.in' }, 1.3)
       .to('#intro-light', { autoAlpha: 1, scale: 1, duration: 0.75 }, 1.85)
+      .call(() => root.classList.add('show-stage'), [], 2.2)
       .set(['.rose-wrap', '.intro-bg'], { autoAlpha: 0 }, 2.55)
       .to('#intro-light', { autoAlpha: 0, duration: 1.1 }, 2.6)
       .add(hero(), 2.5)

@@ -1,66 +1,168 @@
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
-type Palette = Record<string, string | number>
+/*
+ * The garden at five moments of the day. Each moment sets the sky, the sun
+ * and moon, the clouds, how much of the warm (sunset) and moonlit versions of
+ * the painted land show over daylight, which lights are on, and where the
+ * camera is.
+ *
+ * Everything is tweened directly on the few elements that change — never via
+ * inherited CSS variables on the stage, which would re-style thousands of
+ * leaves and petals every scroll frame.
+ */
+interface Moment {
+  sky: [string, string, string]
+  sun: { x: number; y: number; disc: string; glow: string }
+  rays: number
+  moon: { x: number; y: number; o: number }
+  stars: number
+  clouds: { top: string; bottom: string; o: number }
+  birds: number
+  /** 0 = daylight, 1 = full warm (sunset) look */
+  warm: number
+  /** 0 = none, 1 = full moonlight */
+  moonMix: number
+  lights: number
+  bokeh: number
+  fireflies: number
+  night: number
+  petals: number
+  cam: number
+  camY: number
+}
 
-/* The garden at five moments of the day. Numbers are scene units or 0–1 levels. */
-const AFTERNOON: Palette = {
-  '--sky-top': '#cfe3ec', '--sky-mid': '#f1ecdf', '--sky-bottom': '#fbefdc',
-  '--sun': '#fff8e4', '--sun-glow': '#ffe9b8', '--sun-x': 1210, '--sun-y': 250,
-  '--moon-x': 360, '--moon-y': 780, '--moon': 0, '--stars': 0,
-  '--hill-far': '#bfd0c3', '--trees-far': '#a3b89f', '--trees': '#7f9a78', '--hedge': '#64845d', '--topiary': '#6f9066',
-  '--lawn-a': '#a7c08a', '--lawn-b': '#86a66f', '--aisle': '#f6efe4', '--petal-a': '#efc6bd', '--petal-b': '#fbe9e4',
-  '--chair': '#fffaf2', '--chair-shade': '#5a6a3c2e',
-  '--wood': '#fffaf2', '--leaf': '#6f9064', '--rose-a': '#efc0b7', '--rose-b': '#f8ddd7', '--rose-swirl': '#c98a84',
-  '--wire': '#7d7466', '--bulb': '#fbf3dc', '--lights': 0, '--lantern': '#5b5f55', '--glass': '#fdf6e6', '--flame': '#fbe6b0',
-  '--fg': '#5f7d55', '--wild': '#fbf3ee', '--wild-c': '#e8c06a',
-  '--cloud': '#ffffff', '--cloud-shade': '#e2ebf0', '--clouds': 0.85,
-  '--night': 0, '--petals': 1, '--fireflies': 0, '--cam': 1, '--cam-y': 60,
+const AFTERNOON: Moment = {
+  sky: ['#b9d7ea', '#e3eef1', '#fbf2e2'],
+  sun: { x: 1230, y: 230, disc: '#fff9e6', glow: '#ffeec2' },
+  rays: 0.18,
+  moon: { x: 380, y: 820, o: 0 },
+  stars: 0,
+  clouds: { top: '#ffffff', bottom: '#dde7ee', o: 0.95 },
+  birds: 0.75,
+  warm: 0,
+  moonMix: 0,
+  lights: 0,
+  bokeh: 0,
+  fireflies: 0,
+  night: 0,
+  petals: 1,
+  cam: 1,
+  camY: 60,
 }
 /** The hero looks up at the sky; scrolling tilts the camera down onto the garden. */
-const HERO: Palette = { ...AFTERNOON, '--cam': 0.94, '--cam-y': 280 }
-const GOLDEN: Palette = {
+const HERO: Moment = { ...AFTERNOON, cam: 0.94, camY: 280 }
+const GOLDEN: Moment = {
   ...AFTERNOON,
-  '--sky-top': '#f2d6b6', '--sky-mid': '#f9e6cc', '--sky-bottom': '#fde9c8',
-  '--sun': '#ffe7a8', '--sun-glow': '#ffcf7c', '--sun-x': 1170, '--sun-y': 430,
-  '--hill-far': '#cdbd9f', '--trees-far': '#b2a47c', '--trees': '#8f8c5f', '--hedge': '#717a4c', '--topiary': '#7c8552',
-  '--lawn-a': '#b9b67a', '--lawn-b': '#9a9c60', '--aisle': '#f8e7cf', '--petal-a': '#f0bfae', '--petal-b': '#fbe2d6',
-  '--chair': '#fff3e0', '--wood': '#fff2df', '--leaf': '#7a8a55', '--rose-a': '#f2b9a6', '--rose-b': '#f9d8c8',
-  '--fg': '#6a7344', '--wild': '#fff1df', '--petals': 0.7, '--cam': 1.08, '--cam-y': 0,
-  '--cloud': '#fff3e2', '--cloud-shade': '#f1d9bd', '--clouds': 0.8,
+  sky: ['#e9cfb2', '#f7dfc0', '#ffdca6'],
+  sun: { x: 1180, y: 420, disc: '#ffe6a3', glow: '#ffcf7a' },
+  rays: 0.6,
+  clouds: { top: '#fff6e6', bottom: '#efc8a2', o: 0.9 },
+  birds: 0.9,
+  warm: 0.45,
+  petals: 0.7,
+  cam: 1.08,
+  camY: 0,
 }
-const SUNSET: Palette = {
+const SUNSET: Moment = {
   ...GOLDEN,
-  '--sky-top': '#c98a9a', '--sky-mid': '#efa98f', '--sky-bottom': '#f8c79a',
-  '--sun': '#ffc27c', '--sun-glow': '#ff9a6a', '--sun-x': 1120, '--sun-y': 640,
-  '--hill-far': '#a98490', '--trees-far': '#8a6b74', '--trees': '#6c5560', '--hedge': '#5a4f52', '--topiary': '#63575a',
-  '--lawn-a': '#8d7e6a', '--lawn-b': '#6f6452', '--aisle': '#efcab8', '--petal-a': '#e9a99c', '--petal-b': '#f6cfc2',
-  '--chair': '#f7d8c9', '--chair-shade': '#3a28302e', '--wood': '#f6d6c6', '--leaf': '#6f6a4d', '--rose-a': '#ea9f95', '--rose-b': '#f4c4b8',
-  '--wire': '#5a4c4c', '--bulb': '#fde6c2', '--lights': 0.25, '--glass': '#fde7c6',
-  '--fg': '#4c3f40', '--wild': '#f6d6cc', '--night': 0.15, '--petals': 0.35, '--cam': 1.12,
-  '--cloud': '#f6c2b2', '--cloud-shade': '#dc9e98', '--clouds': 0.75,
+  sky: ['#8d6c9c', '#e3938a', '#fbb878'],
+  sun: { x: 1120, y: 640, disc: '#ffbb73', glow: '#ff9566' },
+  rays: 0.4,
+  clouds: { top: '#f9c6b0', bottom: '#b77f96', o: 0.85 },
+  birds: 0.45,
+  warm: 1,
+  lights: 0.12,
+  night: 0.15,
+  petals: 0.3,
+  cam: 1.12,
 }
-const DUSK: Palette = {
+const DUSK: Moment = {
   ...SUNSET,
-  '--sky-top': '#3d3f74', '--sky-mid': '#7a6390', '--sky-bottom': '#d6939a',
-  '--sun': '#ff9e7a', '--sun-glow': '#f0807a', '--sun-x': 1080, '--sun-y': 760,
-  '--moon-x': 380, '--moon-y': 380, '--moon': 0.6, '--stars': 0.35,
-  '--hill-far': '#625f86', '--trees-far': '#4b4a6d', '--trees': '#393a58', '--hedge': '#30334c', '--topiary': '#363a55',
-  '--lawn-a': '#46506a', '--lawn-b': '#343c54', '--aisle': '#a69bb4', '--petal-a': '#b98ea6', '--petal-b': '#d3b4c6',
-  '--chair': '#cfc5dc', '--chair-shade': '#0a0c202e', '--wood': '#d2c9e0', '--leaf': '#3f4a57', '--rose-a': '#c88ea2', '--rose-b': '#dcb3c2', '--rose-swirl': '#8e5f74',
-  '--wire': '#2a2a40', '--bulb': '#ffe3a1', '--lights': 1, '--lantern': '#22243a', '--glass': '#ffe0a0', '--flame': '#ffd27a',
-  '--fg': '#262a40', '--wild': '#b9aecf', '--wild-c': '#d9b36e', '--night': 0.55, '--petals': 0, '--cam': 1.12,
-  '--cloud': '#8a7fa8', '--cloud-shade': '#625a86', '--clouds': 0.45,
+  sky: ['#262a5c', '#5c4d84', '#c58693'],
+  sun: { x: 1080, y: 790, disc: '#ff9a76', glow: '#e9747a' },
+  rays: 0,
+  moon: { x: 400, y: 380, o: 0.65 },
+  stars: 0.4,
+  clouds: { top: '#7f73a3', bottom: '#4b4577', o: 0.6 },
+  birds: 0,
+  moonMix: 0.62,
+  lights: 1,
+  bokeh: 0.6,
+  night: 0.55,
+  petals: 0,
 }
-const NIGHT: Palette = {
+const NIGHT: Moment = {
   ...DUSK,
-  '--sky-top': '#0c1230', '--sky-mid': '#1c2450', '--sky-bottom': '#3a3c6c',
-  '--sun-x': 1060, '--sun-y': 900, '--moon-x': 400, '--moon-y': 200, '--moon': 1, '--stars': 1,
-  '--hill-far': '#252c4e', '--trees-far': '#1d2342', '--trees': '#161b36', '--hedge': '#141a30', '--topiary': '#181e36',
-  '--lawn-a': '#1e2840', '--lawn-b': '#141c30', '--aisle': '#565b7e', '--petal-a': '#7d6a8e', '--petal-b': '#958aa8',
-  '--chair': '#8f93b2', '--wood': '#9ea1be', '--leaf': '#243042', '--rose-a': '#8a6a86', '--rose-b': '#a38aa2', '--rose-swirl': '#5d4560',
-  '--fg': '#10152a', '--wild': '#7f7aa0', '--night': 1, '--fireflies': 1, '--cam': 1.1,
-  '--cloud': '#2b3254', '--cloud-shade': '#1c2240', '--clouds': 0.2,
+  sky: ['#0a1030', '#171f48', '#30366a'],
+  sun: { x: 1060, y: 920, disc: '#ff9a76', glow: '#e9747a' },
+  moon: { x: 420, y: 200, o: 1 },
+  stars: 1,
+  clouds: { top: '#2c335e', bottom: '#1d2348', o: 0.16 },
+  moonMix: 1,
+  bokeh: 0.9,
+  fireflies: 1,
+  night: 1,
+  cam: 1.1,
+}
+
+/** Scene units → px for the `slice`-scaled artwork. */
+const unit = () => Math.max(innerWidth / 1600, innerHeight / 1000)
+
+function targets(stage: HTMLElement) {
+  const q = <T extends Element>(s: string) => stage.querySelector<T>(s)!
+  const qa = <T extends Element>(s: string) => [...stage.querySelectorAll<T>(s)]
+  return {
+    sky: q<HTMLElement>('.sky'),
+    sun: q('.celestial .sun'),
+    sunDisc: q('.celestial .sun-disc'),
+    sunGlow: qa('#sunGlow stop'),
+    moon: q('.celestial .moon'),
+    stars: q('.celestial .night-sky'),
+    cloudStops: qa('#cloudG stop'),
+    clouds: q('.clouds'),
+    birds: q('.birds'),
+    warm: qa('.land-warm'),
+    moonlit: qa('.land-moon'),
+    glows: qa<SVGSVGElement>('.layer.glow'),
+    rays: q('.fx .rays'),
+    bokeh: q('.fx .bokeh'),
+    fireflies: q('.fireflies'),
+    vignette: q('.vignette'),
+    petals: q('.petals'),
+    cams: [
+      [q<HTMLElement>('.cam-back'), 0.92, 0.6],
+      [q<HTMLElement>('.cam-front'), 1, 1],
+      [q<HTMLElement>('.cam-fg'), 1.2, 1.3],
+    ] as [HTMLElement, number, number][],
+  }
+}
+type Targets = ReturnType<typeof targets>
+
+/** Every property a moment controls, as plain values per target. */
+function frame(t: Targets, m: Moment, u: number) {
+  const out: [gsap.TweenTarget, gsap.TweenVars][] = [
+    [t.sky, { '--sky-top': m.sky[0], '--sky-mid': m.sky[1], '--sky-bottom': m.sky[2] }],
+    [t.sun, { x: m.sun.x, y: m.sun.y }],
+    [t.sunDisc, { fill: m.sun.disc }],
+    [t.sunGlow, { stopColor: m.sun.glow }],
+    [t.moon, { x: m.moon.x, y: m.moon.y, opacity: m.moon.o }],
+    [t.stars, { opacity: m.stars }],
+    [t.cloudStops[0], { stopColor: m.clouds.top }],
+    [t.cloudStops[1], { stopColor: m.clouds.bottom }],
+    [t.clouds, { opacity: m.clouds.o }],
+    [t.birds, { opacity: m.birds }],
+    [t.warm, { opacity: m.warm }],
+    [t.moonlit, { opacity: m.moonMix }],
+    [t.glows, { '--lights': m.lights }],
+    [t.rays, { x: m.sun.x, y: m.sun.y, opacity: m.rays }],
+    [t.bokeh, { opacity: m.bokeh }],
+    [t.fireflies, { opacity: m.fireflies }],
+    [t.vignette, { opacity: m.night * 0.7 }],
+    [t.petals, { '--petals': m.petals }],
+  ]
+  for (const [el, k, s] of t.cams) out.push([el, { y: m.camY * u * k, scale: 1 + (m.cam - 1) * s }])
+  return out
 }
 
 /**
@@ -70,20 +172,29 @@ const NIGHT: Palette = {
  * come on for dinner, and the fireflies and stars arrive for dancing.
  */
 export function setupDay(stage: HTMLElement, reduced: boolean) {
-  gsap.set(stage, HERO)
   const root = document.documentElement
+  const t = targets(stage)
+  const place = () => {
+    const u = unit()
+    for (const [el] of t.cams) gsap.set(el, { transformOrigin: `50% ${innerHeight - 240 * u}px` })
+    return u
+  }
+  for (const [target, vars] of frame(t, HERO, place())) gsap.set(target, vars)
+
   const events = [...document.querySelectorAll<HTMLElement>('.event')]
   const moments = [GOLDEN, SUNSET, DUSK, NIGHT]
-  const stops: [HTMLElement | null, Palette][] = [
+  const stops: [HTMLElement | null, Moment][] = [
     [document.getElementById('story'), AFTERNOON],
     [document.getElementById('when'), GOLDEN],
-    ...events.map((el, i): [HTMLElement, Palette] => [el, moments[Math.min(i, moments.length - 1)]]),
+    ...events.map((el, i): [HTMLElement, Moment] => [el, moments[Math.min(i, moments.length - 1)]]),
     [document.getElementById('footer'), NIGHT],
   ]
 
   let trigger: ScrollTrigger | null = null
   const build = () => {
+    const progress = trigger?.progress ?? 0
     trigger?.kill()
+    const u = place()
     const max = Math.max(1, root.scrollHeight - innerHeight)
     const centre = (el: HTMLElement) => {
       const top = el.getBoundingClientRect().top + scrollY
@@ -94,12 +205,17 @@ export function setupDay(stage: HTMLElement, reduced: boolean) {
     let from = HERO
     for (const [el, to] of stops) {
       if (!el) continue
-      const t = centre(el)
-      if (t > t0) tl.fromTo(stage, { ...from }, { ...to, duration: t - t0, immediateRender: false }, t0)
-      t0 = Math.max(t0, t)
+      const at = centre(el)
+      if (at > t0) {
+        const a = frame(t, from, u)
+        const b = frame(t, to, u)
+        a.forEach(([target, vars], i) => tl.fromTo(target, { ...vars }, { ...b[i][1], duration: at - t0, immediateRender: false }, t0))
+      }
+      t0 = Math.max(t0, at)
       from = to
     }
     if (t0 < 1) tl.to({}, { duration: 1 - t0 }, t0)
+    tl.progress(progress)
     trigger = ScrollTrigger.create({ animation: tl, start: 0, end: 'max', scrub: reduced ? true : 0.8 })
   }
   build()
@@ -131,14 +247,14 @@ export function setupDay(stage: HTMLElement, reduced: boolean) {
       onLeaveBack: () => root.classList.remove('is-night'),
     })
 
-  // A little pointer parallax on desktop: deeper layers drift more.
+  // A little pointer parallax on desktop: nearer layers drift more.
   if (!reduced && matchMedia('(hover: hover) and (pointer: fine)').matches) {
-    const layers = [...stage.querySelectorAll<SVGGElement>('.px')].map((g) => {
-      const depth = Number(g.dataset.depth)
+    const layers = [...stage.querySelectorAll<HTMLElement>('.px')].map((el) => {
+      const depth = Number(el.dataset.depth)
       return {
         depth,
-        x: gsap.quickTo(g, 'x', { duration: 1.2, ease: 'power3.out' }),
-        y: gsap.quickTo(g, 'y', { duration: 1.2, ease: 'power3.out' }),
+        x: gsap.quickTo(el, 'x', { duration: 1.2, ease: 'power3.out' }),
+        y: gsap.quickTo(el, 'y', { duration: 1.2, ease: 'power3.out' }),
       }
     })
     addEventListener('pointermove', (e) => {

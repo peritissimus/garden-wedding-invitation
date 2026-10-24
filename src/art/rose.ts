@@ -4,7 +4,7 @@ import { f, leaf, rng } from './util'
 export const C = 300
 
 /** Rose petal pointing up from its base at the origin: rounded with a softly notched rim. */
-const petalPath = (L: number, W: number) =>
+export const petalPath = (L: number, W: number) =>
   `M0 0C${f(-W * 0.55)} ${f(-L * 0.18)} ${f(-W * 0.98)} ${f(-L * 0.62)} ${f(-W * 0.62)} ${f(-L * 0.93)}C${f(-W * 0.38)} ${f(-L * 1.06)} ${f(-W * 0.14)} ${f(-L * 0.98)} 0 ${f(-L * 1.01)}C${f(W * 0.14)} ${f(-L * 0.98)} ${f(W * 0.38)} ${f(-L * 1.06)} ${f(W * 0.62)} ${f(-L * 0.93)}C${f(W * 0.98)} ${f(-L * 0.62)} ${f(W * 0.55)} ${f(-L * 0.18)} 0 0Z`
 
 const rimPath = (L: number, W: number) =>

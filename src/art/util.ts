@@ -39,3 +39,17 @@ export function blob(cx: number, cy: number, R: number, n: number, jitter: numbe
   }
   return `${d}Z`
 }
+
+type P = readonly [number, number]
+
+/** Join points with small arcs that bulge to the left of travel (outwards when going clockwise). */
+export function scallop(points: P[], bulge = 0.56) {
+  let d = ''
+  for (let i = 1; i < points.length; i++) {
+    const [x0, y0] = points[i - 1]
+    const [x1, y1] = points[i]
+    const r = Math.hypot(x1 - x0, y1 - y0) * bulge
+    d += `A${f(r)} ${f(r)} 0 0 1 ${f(x1)} ${f(y1)}`
+  }
+  return d
+}

@@ -3,7 +3,7 @@ import { at, couple, esc, fmtDay, fmtTime, weddingStart } from './lib/format'
 import { sharedDefs } from './art/defs'
 import { circleMark, flourish, icon, petals, rsvpArt, swatch, venueArt, wreath } from './art/ornaments'
 import { rose } from './art/rose'
-import { fireflies, scene } from './art/scene'
+import { backLayer, birds, celestial, clouds, fgLayer, fireflies, frontLayer, fxLayer, glowBack, glowFront, graded } from './art/scene'
 
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
 
@@ -17,10 +17,18 @@ export function render(root: HTMLElement) {
 
   root.innerHTML = `${sharedDefs}
 <div class="stage" id="stage" aria-hidden="true">
-  ${scene()}
+  <div class="sky"></div>
+  ${celestial()}
+  <div class="clouds">${clouds()}</div>
+  <div class="birds">${birds()}</div>
+  <div class="px" data-depth="6"><div class="cam cam-back">${backLayer()}${graded('back', 'warm')}${graded('back', 'moon')}${glowBack()}</div></div>
+  <div class="px" data-depth="14"><div class="cam cam-front">${frontLayer()}${graded('front', 'warm')}${graded('front', 'moon')}${glowFront()}</div></div>
+  <div class="px" data-depth="30"><div class="cam cam-fg">${fgLayer()}${graded('fg', 'warm')}${graded('fg', 'moon')}</div></div>
+  ${fxLayer()}
   <div class="petals">${petals(14, 5)}</div>
   <div class="fireflies" id="fireflies">${fireflies(44)}</div>
   <div class="shooting"><i></i><i></i></div>
+  <div class="vignette"></div>
 </div>
 
 <div class="intro" id="intro">
