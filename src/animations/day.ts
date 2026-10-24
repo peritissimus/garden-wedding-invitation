@@ -227,6 +227,7 @@ function frame(t: Targets, m: Moment, L: Layout) {
  */
 export function setupDay(el: HTMLElement, reduced: boolean) {
   const root = document.documentElement
+  const touch = matchMedia('(pointer: coarse)').matches
   const stage = mountStage(el)
   const t = targets(el)
   const place = () => {
@@ -234,14 +235,15 @@ export function setupDay(el: HTMLElement, reduced: boolean) {
     for (const [cam] of t.cams) gsap.set(cam, { transformOrigin: `50% ${L.h - 240 * L.u}px` })
     return L
   }
-  /** Each frame: the sky and lights, and dark-glass cards (and waking fireflies) whenever it's night. */
+  /** Each frame: the sky and lights; after dark the stars and fairy lights twinkle and the fireflies wake. */
   const paint = () => {
     stage.update(t.paint)
     root.classList.toggle('is-dusk', t.paint.night > 0.4)
     root.classList.toggle('is-night', t.paint.night > 0.75)
   }
   /** How far down the hero's text reaches, scroll prompt included (it sits at the top of the page). */
-  const heroText = () => ((document.querySelector('.hero .scroll-cue') ?? document.querySelector('.hero .date-block'))?.getBoundingClientRect().bottom ?? 0) + scrollY
+  const heroText = () =>
+    Math.max(0, ...['.hero .date-block', '.hero .scroll-cue'].map((s) => document.querySelector(s)?.getBoundingClientRect().bottom ?? 0)) + scrollY
   const setHero = (L: Layout) => {
     for (const [target, vars] of frame(t, heroFor(L, heroText()), L)) gsap.set(target, vars)
     paint()
@@ -250,8 +252,8 @@ export function setupDay(el: HTMLElement, reduced: boolean) {
 
   const byId = (id: string) => document.getElementById(id)
   const events = [...document.querySelectorAll<HTMLElement>('.event')]
-  /** where each moment falls: on a section, or halfway between two (dawn) */
-  type Stop = { at: HTMLElement | [HTMLElement, HTMLElement] | null; m: Moment }
+  /** where each moment falls: on a section, or part way between two (`t` of the way) */
+  type Stop = { at: HTMLElement | { a: HTMLElement; b: HTMLElement; t: number } | null; m: Moment }
   const stops: Stop[] = [
     { at: byId('story'), m: AFTERNOON },
     { at: byId('when'), m: AFTERNOON },
@@ -259,7 +261,7 @@ export function setupDay(el: HTMLElement, reduced: boolean) {
   events.forEach((el, i) => {
     const m = lightAt(el.dataset.time ?? '12:00')
     const prev = events[i - 1]
-    if (prev && prev.dataset.date !== el.dataset.date && stops[stops.length - 1].m.night > 0.3) stops.push({ at: [prev, el], m: DAWN })
+    if (prev && prev.dataset.date !== el.dataset.date && stops[stops.length - 1].m.night > 0.3) stops.push({ at: { a: prev, b: el, t: 0.5 }, m: DAWN })
     stops.push({ at: el, m })
   })
   const last = EVENING.indexOf(stops[stops.length - 1].m)
@@ -269,6 +271,15 @@ export function setupDay(el: HTMLElement, reduced: boolean) {
     { at: byId('rsvp'), m: NIGHT },
     { at: byId('footer'), m: NIGHT },
   )
+  // Evening never jumps straight from day to night (the halfway mix is a flat grey): it goes
+  // through sunset and dusk on the way, however short the scroll between the two.
+  for (let i = stops.length - 1; i > 0; i--) {
+    const [from, to] = [stops[i - 1], stops[i]]
+    if (!(from.at instanceof HTMLElement && to.at instanceof HTMLElement) || from.m.night > 0.3 || to.m.night < 0.7) continue
+    const [a, b] = [from.at, to.at]
+    const between = from.m === SUNSET ? [{ t: 0.5, m: DUSK }] : [{ t: 1 / 3, m: SUNSET }, { t: 2 / 3, m: DUSK }]
+    stops.splice(i, 0, ...between.map(({ t, m }) => ({ at: { a, b, t }, m })))
+  }
 
   let trigger: ScrollTrigger | null = null
   const build = () => {
@@ -280,7 +291,7 @@ export function setupDay(el: HTMLElement, reduced: boolean) {
       const top = el.getBoundingClientRect().top + scrollY
       return Math.min(1, Math.max(0, (top + el.offsetHeight / 2 - innerHeight / 2) / max))
     }
-    const position = (at: Stop['at']) => (Array.isArray(at) ? (centre(at[0]) + centre(at[1])) / 2 : centre(at!))
+    const position = (at: Stop['at']) => (at instanceof HTMLElement ? centre(at) : centre(at!.a) + (centre(at!.b) - centre(at!.a)) * at!.t)
     const tl = gsap.timeline({ paused: true, defaults: { ease: 'none' }, onUpdate: paint })
     if (!progress) setHero(L)
     let t0 = 0
@@ -298,7 +309,9 @@ export function setupDay(el: HTMLElement, reduced: boolean) {
     }
     if (t0 < 1) tl.to({}, { duration: 1 - t0 }, t0)
     tl.progress(progress)
-    trigger = ScrollTrigger.create({ animation: tl, start: 0, end: 'max', scrub: reduced ? true : 0.8 })
+    // the light eases after your scroll rather than snapping with it — on a phone, a flick
+    // through two sections becomes a gentle change of light instead of a flash
+    trigger = ScrollTrigger.create({ animation: tl, start: 0, end: 'max', scrub: reduced ? true : touch ? 1.6 : 1 })
   }
   build()
   // The stage is sized to the large viewport, so a phone's toolbar sliding

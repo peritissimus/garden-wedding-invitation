@@ -1,6 +1,6 @@
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { TEMPO, blur, slow } from './tempo'
+import { TEMPO, slow } from './tempo'
 
 const $ = <T extends Element = HTMLElement>(s: string, root: ParentNode = document) => root.querySelector<T>(s)
 const $$ = <T extends Element = HTMLElement>(s: string, root: ParentNode = document) => [...root.querySelectorAll<T>(s)]
@@ -15,12 +15,10 @@ const DRAW = { strokeDashoffset: 0, ease: 'power2.inOut' }
 export function setupSections(reduced: boolean) {
   document.documentElement.style.setProperty('--tempo', String(TEMPO.reveal))
   reveals(reduced)
-  cards(reduced)
   if (reduced) {
     document.querySelectorAll('.ink').forEach((n) => n.classList.add('inked'))
     return
   }
-  words()
   flourishes()
   wreath()
   dateMark()
@@ -34,33 +32,29 @@ export function setupSections(reduced: boolean) {
   shooting()
 }
 
-/** Headings, labels, buttons: 600ms strong ease-out, 12px + light blur, 60ms stagger. */
+/**
+ * Text settles in quietly just as it comes on screen — a short fade and a few
+ * pixels of rise, no blur — so it's done before you get to it. The cards
+ * themselves are always there: nothing pops in while you're reading.
+ */
 function reveals(reduced: boolean) {
+  // On touch screens a flick outruns any fade, so the text is simply there.
+  if (!reduced && matchMedia('(pointer: coarse)').matches) return
   const els = $$('.reveal')
-  gsap.set(els, reduced ? { autoAlpha: 0 } : { autoAlpha: 0, y: 12, ...blur(4) })
+  gsap.set(els, reduced ? { autoAlpha: 0 } : { autoAlpha: 0, y: 8 })
   ScrollTrigger.batch(els, {
-    start: 'top 92%',
+    start: 'top bottom',
     once: true,
     onEnter: (batch) =>
       slow(gsap.to(
         batch,
         reduced
           ? { autoAlpha: 1, duration: 0.3, ease: 'none', stagger: 0.04 }
-          : { autoAlpha: 1, y: 0, ...blur(0), duration: 0.6, ease: 'emilOut', stagger: 0.06, clearProps: 'filter,transform' },
+          : { autoAlpha: 1, y: 0, duration: 0.45, ease: 'emilOut', stagger: 0.04, clearProps: 'transform' },
       )),
   })
 }
 
-/** Love letter: words ink in left to right — the whole paragraph in under a second. */
-function words() {
-  const box = $('.words')
-  if (!box) return
-  const ws = $$('.word', box)
-  gsap.set(ws, { autoAlpha: 0, y: 6, ...blur(3) })
-  once(box, 'top 88%', () =>
-    slow(gsap.to(ws, { autoAlpha: 1, y: 0, ...blur(0), duration: 0.45, ease: 'emilOut', stagger: 0.018, clearProps: 'filter,transform' })),
-  )
-}
 
 function flourishes() {
   $$('.flourish').forEach((svg) => {
@@ -160,7 +154,8 @@ function footer() {
 /** Countdown rolls up from zero once, then ticks normally. */
 function countUp() {
   const el = $('#countdown')
-  if (!el) return
+  // rolling digits are flashing numbers on a phone; there they're simply shown
+  if (!el || matchMedia('(pointer: coarse)').matches) return
   once(el, 'top 92%', () => {
     $$('strong', el).forEach((s, i) => {
       const target = Number(s.textContent) || 0
@@ -177,15 +172,6 @@ function countUp() {
 }
 
 
-/** Each card settles in as it arrives: a short rise and fade, never a wait. */
-function cards(reduced: boolean) {
-  for (const card of $$('main .card')) {
-    gsap.set(card, reduced ? { autoAlpha: 0 } : { autoAlpha: 0, y: 28, scale: 0.985 })
-    once(card, 'top 90%', () =>
-      slow(gsap.to(card, reduced ? { autoAlpha: 1, duration: 0.4, ease: 'none' } : { autoAlpha: 1, y: 0, scale: 1, duration: 0.9, ease: 'emilOut', clearProps: 'transform' })),
-    )
-  }
-}
 
 /** The order of the day: each moment's icon draws itself as its card arrives. */
 function events() {

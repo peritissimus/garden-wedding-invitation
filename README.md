@@ -76,12 +76,15 @@ Timings follow Emil Kowalski's design-engineering guidelines:
 
 - Entrances use a strong ease-out (`cubic-bezier(.23, 1, .32, 1)`), movement on
   screen uses a strong ease-in-out; no `ease-in` on UI.
-- Text reveals are 450–600ms with 18–60ms staggers and fire just before the
-  element is in view, so nothing waits on the reader.
-- Only the garden's time of day is scroll-scrubbed; everything else plays once.
+- Calm reading: cards are always there (never popped in), keep one warm paper
+  look all day and night, and hold still while the garden changes behind them.
+  On desktops text settles in with a short fade as it comes on screen; on touch
+  screens, where a flick outruns any fade, text and numbers are simply shown.
+- Only the garden's time of day is scroll-scrubbed, and it eases after the
+  scroll (more so on touch), passing through sunset and dusk rather than
+  cutting from day to night.
 - The garden is painted once into canvases (at most 2× pixel density), so
-  scrolling only moves and fades bitmaps — no repainting, even on phones. On
-  touch screens text reveals skip the blur, which costs an offscreen pass per word.
+  scrolling only moves and fades bitmaps — no repainting, even on phones.
 - Buttons press to `scale(.97)`; hover effects are gated behind
   `(hover: hover) and (pointer: fine)`.
 - Petals and swaying botanicals are CSS-only (transform + opacity) and pause

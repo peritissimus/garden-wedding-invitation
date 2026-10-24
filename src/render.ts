@@ -84,10 +84,7 @@ export function render(root: HTMLElement) {
     ${wreath(esc(config.partnerOne[0] ?? ''), esc(config.partnerTwo[0] ?? ''))}
     <p class="eyebrow reveal">A little love letter</p>
     <h2 class="reveal">Our favourite day${many ? 's' : ''},<br><em>with our favourite people</em></h2>
-    <p class="lead words">${config.message
-      .split(' ')
-      .map((w) => `<span class="word">${esc(w)}</span>`)
-      .join(' ')}</p>
+    <p class="lead reveal">${esc(config.message)}</p>
   </div>
 </section>
 
