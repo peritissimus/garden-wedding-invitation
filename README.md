@@ -16,7 +16,7 @@ Live: https://garden-wedding-bloom.vercel.app
 ## Stack
 
 - [Vite](https://vite.dev) + TypeScript (no UI framework)
-- [GSAP](https://gsap.com) + ScrollTrigger for the pinned envelope scene and scroll reveals
+- [GSAP](https://gsap.com) + ScrollTrigger for the bloom, the scroll-driven time of day and reveals
 - Hand-generated SVG botanicals (no image assets)
 
 ## Editing the invitation
