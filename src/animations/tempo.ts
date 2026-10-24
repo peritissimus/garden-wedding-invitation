@@ -3,8 +3,8 @@
  * Press/hover feedback is deliberately not scaled — it must stay instant.
  */
 export const TEMPO = {
-  /** Envelope opening and hero entrance — the once-per-visit ceremony. */
-  opening: 1.6,
+  /** The rose blooming and the hero entrance — the once-per-visit ceremony. */
+  opening: 1.35,
   /** Scroll reveals, line drawings and flourishes further down the page. */
   reveal: 1.35,
 }

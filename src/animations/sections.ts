@@ -1,7 +1,5 @@
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { leaf } from '../art/util'
-import { growFlora, prepareFlora } from './hero'
 import { TEMPO, slow } from './tempo'
 
 const $ = <T extends Element = HTMLElement>(s: string, root: ParentNode = document) => root.querySelector<T>(s)
@@ -17,7 +15,7 @@ const DRAW = { strokeDashoffset: 0, ease: 'power2.inOut' }
 export function setupSections(reduced: boolean) {
   document.documentElement.style.setProperty('--tempo', String(TEMPO.reveal))
   reveals(reduced)
-  timeline(reduced)
+  cards(reduced)
   if (reduced) {
     document.querySelectorAll('.ink').forEach((n) => n.classList.add('inked'))
     return
@@ -31,7 +29,9 @@ export function setupSections(reduced: boolean) {
   rsvp()
   footer()
   countUp()
-  parallax()
+  events()
+  heart()
+  shooting()
 }
 
 /** Headings, labels, buttons: 600ms strong ease-out, 12px + light blur, 60ms stagger. */
@@ -99,70 +99,6 @@ function dateMark() {
   once(path.closest('h2')!, 'top 90%', () => slow(gsap.to(path, { ...DRAW, duration: 0.8, delay: 0.35 })))
 }
 
-/**
- * Order of the day: a vine grows down the timeline with the scroll (the only
- * scrubbed piece), sprouting leaves; each moment lights up as the vine
- * reaches it and its icon draws itself.
- */
-function timeline(reduced: boolean) {
-  const wrap = $('.timeline')
-  if (!wrap) return
-  const svg = $<SVGSVGElement>('.vine', wrap)!
-  const items = $$('.t-item', wrap)
-  let grow: SVGPathElement | null = null
-  let growTo: ((v: number) => void) | null = null
-  let leaves: SVGElement[] = []
-  let marks: number[] = []
-
-  const build = () => {
-    const h = wrap.offsetHeight
-    const x = 8
-    let d = `M${x} 0`
-    for (let y = 0, k = 0; y < h; y += 56, k++) d += `Q${x + (k % 2 ? 4.5 : -4.5)} ${y + 28} ${x} ${Math.min(h, y + 56)}`
-    let ls = ''
-    for (let y = 30, i = 0; y < h - 12; y += 38, i++) {
-      ls += `<g transform="translate(${x} ${y}) rotate(${i % 2 ? -38 : 218})"><path class="vleaf" data-t="${(y / h).toFixed(3)}" d="${leaf(13, 3.6)}"/></g>`
-    }
-    svg.setAttribute('viewBox', `0 0 24 ${h}`)
-    svg.style.height = `${h}px`
-    svg.innerHTML = `<path class="vine-base" d="${d}"/><path class="vine-grow" pathLength="1" d="${d}"/>${ls}`
-    grow = svg.querySelector('.vine-grow')
-    growTo = grow && !reduced ? gsap.quickTo(grow, 'strokeDashoffset', { duration: 0.35, ease: 'power3.out' }) : null
-    leaves = [...svg.querySelectorAll<SVGElement>('.vleaf')]
-    marks = items.map((it) => (it.offsetTop + 19) / h)
-  }
-
-  const icons = (it: Element) => {
-    if (!reduced) slow(gsap.to($$('.t-icon .draw', it), { ...DRAW, duration: 0.7, stagger: 0.08, delay: 0.1 }))
-  }
-
-  const update = (p: number) => {
-    if (growTo) growTo(1 - p)
-    else if (grow) grow.style.strokeDashoffset = String(1 - p)
-    leaves.forEach((l) => l.classList.toggle('on', p >= Number(l.dataset.t)))
-    items.forEach((it, i) => {
-      const on = p >= marks[i] - 0.01
-      it.classList.toggle('lit', on)
-      if (on && !it.classList.contains('seen')) {
-        it.classList.add('seen')
-        icons(it)
-      }
-    })
-  }
-
-  build()
-  if (!reduced) hideStroke($$('.t-icon .draw', wrap))
-  ScrollTrigger.create({
-    trigger: wrap,
-    start: 'top 65%',
-    end: 'bottom 65%',
-    onUpdate: (s) => update(s.progress),
-    onRefresh: (s) => {
-      build()
-      update(s.progress)
-    },
-  })
-}
 
 function venue() {
   const svg = $('.venue-art')
@@ -195,9 +131,6 @@ function palette() {
 function rsvp() {
   const section = $('#rsvp')
   if (!section) return
-  prepareFlora(section)
-  once(section, 'top 70%', () => slow(growFlora(section)))
-
   const art = $('.rsvp-art', section)
   if (!art) return
   const paths = $$('.draw', art)
@@ -243,25 +176,59 @@ function countUp() {
   })
 }
 
-/** Depth: botanical layers drift at different speeds; hero copy eases away. */
-function parallax() {
-  $$('.flora').forEach((svg) => {
-    const section = svg.closest('section')
-    if (!section) return
-    const start = section.id === 'hero' ? 'top top' : 'top bottom'
-    const layers: [string, number][] = [
-      ['.layer-back', 24],
-      ['.layer-mid', 48],
-      ['.layer-front', 90],
-    ]
-    layers.forEach(([sel, y]) =>
-      gsap.to($(sel, svg), { y, ease: 'none', scrollTrigger: { trigger: section, start, end: 'bottom top', scrub: 0.4 } }),
+
+/** Each card settles in as it arrives: a short rise and fade, never a wait. */
+function cards(reduced: boolean) {
+  for (const card of $$('main .card')) {
+    gsap.set(card, reduced ? { autoAlpha: 0 } : { autoAlpha: 0, y: 28, scale: 0.985 })
+    once(card, 'top 90%', () =>
+      slow(gsap.to(card, reduced ? { autoAlpha: 1, duration: 0.4, ease: 'none' } : { autoAlpha: 1, y: 0, scale: 1, duration: 0.9, ease: 'emilOut', clearProps: 'transform' })),
     )
-  })
-  gsap.to('.hero-copy', {
-    yPercent: -10,
-    autoAlpha: 0.25,
-    ease: 'none',
-    scrollTrigger: { trigger: '#hero', start: 'top top', end: 'bottom top', scrub: 0.4 },
+  }
+}
+
+/** The order of the day: each moment's icon draws itself as its card arrives. */
+function events() {
+  for (const ev of $$('.event')) {
+    const paths = $$('.t-icon .draw', ev)
+    hideStroke(paths)
+    once(ev, 'top 72%', () => slow(gsap.to(paths, { ...DRAW, duration: 0.8, stagger: 0.08, delay: 0.2 })))
+  }
+}
+
+/** At the RSVP the fireflies gather into a heart in the night sky, and drift off again after. */
+function heart() {
+  const layer = $('#fireflies')
+  const rsvp = $('#rsvp')
+  if (!layer || !rsvp) return
+  const flies = $$('.ff', layer)
+  const gather = () => {
+    const size = Math.min(innerWidth * 0.4, 330) / 32
+    const cx = innerWidth / 2
+    const cy = innerHeight * 0.2
+    flies.forEach((ff, i) => {
+      const t = (i / flies.length) * Math.PI * 2
+      const hx = 16 * Math.sin(t) ** 3
+      const hy = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t))
+      gsap.to(ff, { x: cx + hx * size - ff.offsetLeft, y: cy + hy * size - ff.offsetTop, duration: 1.8, delay: i * 0.012, ease: 'emilInOut', overwrite: true })
+    })
+  }
+  const scatter = () => gsap.to(flies, { x: 0, y: 0, duration: 1.6, ease: 'emilInOut', stagger: 0.008, overwrite: true })
+  ScrollTrigger.create({ trigger: rsvp, start: 'top 60%', end: 'bottom 35%', onEnter: gather, onEnterBack: gather, onLeave: scatter, onLeaveBack: scatter })
+}
+
+/** A shooting star crosses the night sky when you reach the end. */
+function shooting() {
+  const sky = $('.shooting')
+  const footer = $('#footer')
+  if (!sky || !footer) return
+  ScrollTrigger.create({
+    trigger: footer,
+    start: 'top 70%',
+    onEnter: () => {
+      sky.classList.remove('go')
+      void sky.offsetWidth
+      sky.classList.add('go')
+    },
   })
 }

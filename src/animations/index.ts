@@ -1,13 +1,14 @@
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import './ease'
+import { setupDay } from './day'
 import { heroTimeline, prepareHero } from './hero'
 import { setupIntro } from './intro'
 import { setupSections } from './sections'
 
 gsap.registerPlugin(ScrollTrigger)
 
-/** Petals only animate while their container is on screen. */
+/** Petals only animate while they are on screen. */
 function livePetals() {
   const io = new IntersectionObserver((entries) =>
     entries.forEach((e) => e.target.classList.toggle('live', e.isIntersecting)),
@@ -26,6 +27,7 @@ export function setupAnimations() {
 
   prepareHero(reduced)
   setupSections(reduced)
+  setupDay(document.getElementById('stage')!, reduced)
   setupIntro({ reduced, hero: () => heroTimeline(reduced) })
 
   document.fonts?.ready.then(() => ScrollTrigger.refresh())

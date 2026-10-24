@@ -1,10 +1,17 @@
-# Garden wedding invitation
+# Garden wedding invitation — “Bloom”
 
-An animated, single-page wedding invitation. Guests open a wax-sealed envelope
-(tap the seal **or** scroll), then scroll through the details with soft,
-scroll-driven animations.
+A single rosebud on cream paper. Tap it (or scroll) and it blooms ring by
+ring, then you fall into its golden heart — and the light becomes the sun over
+the garden where the wedding happens.
 
-Live: https://garden-wedding-invitation.vercel.app
+Scrolling is the clock of the day: the garden behind the page moves from
+afternoon to golden hour, sunset, dusk and night. The order of the day lines up
+with the light — the ceremony in golden hour, cocktails at sunset, the string
+lights and lanterns come on for dinner, stars and fireflies arrive for the
+dancing, the fireflies gather into a heart at the RSVP, and a shooting star
+crosses the sky at the end.
+
+Live: https://garden-wedding-bloom.vercel.app
 
 ## Stack
 
@@ -41,15 +48,16 @@ src/
   render.ts              # page markup
   main.ts                # entry: countdown, calendar, RSVP wiring
   art/                   # hand-built SVG artwork (no image files)
-    seal.ts              # wax seal that cracks in two
-    flora.ts             # eucalyptus / olive / gypsophila / rose corners
+    rose.ts              # the rosebud that blooms (five rings of petals)
+    scene.ts             # the garden: arch, aisle, chairs, lights, hills, sky
     ornaments.ts         # wreath, flourish, glasshouse, icons, swatches, petals
     defs.ts              # shared gradients + watercolour filters
   animations/
     ease.ts              # Emil Kowalski's custom curves (CustomEase)
-    intro.ts             # tap-or-scroll envelope opening
-    hero.ts              # ink-written names, botanicals growing in
-    sections.ts          # reveals, line drawings, timeline vine, count-up
+    intro.ts             # tap-or-scroll bloom and dive into the light
+    day.ts               # scroll-driven time of day (five palettes)
+    hero.ts              # ink-written names
+    sections.ts          # card reveals, line drawings, firefly heart, shooting star
   lib/                   # date formatting, calendar export
   styles/main.css
 ```

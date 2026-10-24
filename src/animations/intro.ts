@@ -1,5 +1,6 @@
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { C, RINGS } from '../art/rose'
 import { TEMPO } from './tempo'
 
 interface IntroOptions {
@@ -7,27 +8,17 @@ interface IntroOptions {
   hero: () => gsap.core.Timeline
 }
 
-/** The seal cracks along its seam and the halves fall away. */
-function crack(seal: HTMLElement) {
-  const whole = seal.querySelector('.seal-whole')
-  const left = seal.querySelector('.seal-l')
-  const right = seal.querySelector('.seal-r')
-  return gsap
-    .timeline({ defaults: { ease: 'emilOut' } })
-    .to(seal, { scale: 0.94, duration: 0.1 })
-    .set(whole, { autoAlpha: 0 })
-    .set([left, right], { autoAlpha: 1 })
-    .to(seal, { scale: 1, duration: 0.3 })
-    .to(left, { x: -4, rotation: -9, svgOrigin: '50 92', duration: 0.16 }, '<')
-    .to(right, { x: 4, rotation: 9, svgOrigin: '50 92', duration: 0.16 }, '<')
-    .to(left, { x: -24, y: 74, rotation: -36, autoAlpha: 0, duration: 0.55, ease: 'power2.in' }, '>-0.04')
-    .to(right, { x: 22, y: 82, rotation: 32, autoAlpha: 0, duration: 0.55, ease: 'power2.in' }, '<')
-}
+/** How tightly each ring is wound in the bud (outer → inner). */
+const BUD = RINGS.map((_, k) => ({ scale: [0.29, 0.34, 0.4, 0.49, 0.62][k], rotation: 58 + k * 14 }))
+/** Petals, leaves and sepals live in groups already moved to the centre, so they turn about their own 0,0. */
+const LOCAL = '0 0'
+/** The zoom group is not transformed, so it turns about the rose centre in SVG space. */
+const ORIGIN = `${C} ${C}`
 
 /**
- * Never hold the guest hostage: once the opening is playing, a fresh scroll,
+ * Never hold the guest hostage: once the bloom is playing, a fresh scroll,
  * swipe, tap or key press plays the rest quickly. Wheel momentum from the
- * gesture that opened the envelope is ignored (it arrives without a pause).
+ * gesture that started it is ignored (it arrives without a pause).
  */
 function hurryOnIntent(tl: gsap.core.Timeline, surface: HTMLElement) {
   const started = performance.now()
@@ -58,16 +49,16 @@ function hurryOnIntent(tl: gsap.core.Timeline, surface: HTMLElement) {
 }
 
 /**
- * The page stays locked behind the envelope until the guest either taps the
- * seal or tries to scroll (wheel, swipe up, arrow/space). Either one plays
- * the same opening, then hands native scrolling straight back.
+ * A single rosebud. Tapping it — or trying to scroll — makes it bloom ring by
+ * ring from the outside in, then we fall into its golden heart; the light
+ * becomes the afternoon sun over the garden where the day begins.
  */
 export function setupIntro({ reduced, hero }: IntroOptions) {
   const root = document.documentElement
   const intro = document.getElementById('intro')!
   const seal = document.getElementById('seal') as HTMLButtonElement
-  const flap = intro.querySelector<HTMLElement>('.flap')!
-  const letter = intro.querySelector<HTMLElement>('.letter')!
+  const wrap = intro.querySelector<HTMLElement>('.rose-wrap')!
+  const rings = RINGS.map((_, k) => [...intro.querySelectorAll(`.rp[data-ring="${k}"]`)])
 
   // Lock scrolling; pad for the scrollbar we hide so nothing shifts on unlock.
   const gutter = window.innerWidth - root.clientWidth
@@ -75,8 +66,11 @@ export function setupIntro({ reduced, hero }: IntroOptions) {
   if (gutter > 0) document.body.style.paddingRight = `${gutter}px`
 
   if (!reduced) {
-    // Arrival: the envelope settles onto the table.
-    gsap.from('.envelope-wrap', { y: 18, autoAlpha: 0, duration: 0.8 * TEMPO.opening, ease: 'emilOut' })
+    rings.forEach((els, k) => gsap.set(els, { ...BUD[k], svgOrigin: LOCAL }))
+    gsap.set('.rleaf', { scale: 0.5, svgOrigin: LOCAL })
+    gsap.set('.rose-heart', { autoAlpha: 0 })
+    // Arrival: the bud settles in, then the invitation line.
+    gsap.from(wrap, { autoAlpha: 0, scale: 0.92, duration: 1.1 * TEMPO.opening, ease: 'emilOut' })
     gsap.from('.intro-copy > *', {
       y: 8,
       autoAlpha: 0,
@@ -84,7 +78,7 @@ export function setupIntro({ reduced, hero }: IntroOptions) {
       duration: 0.6 * TEMPO.opening,
       ease: 'emilOut',
       stagger: 0.08 * TEMPO.opening,
-      delay: 0.25 * TEMPO.opening,
+      delay: 0.35 * TEMPO.opening,
       clearProps: 'filter',
     })
   }
@@ -132,23 +126,28 @@ export function setupIntro({ reduced, hero }: IntroOptions) {
     const tl = gsap.timeline({ defaults: { ease: 'emilOut' } })
 
     if (reduced) {
-      tl.to(intro, { autoAlpha: 0, duration: 0.4, ease: 'none' }, 0).add(hero(), 0).call(finish, [], 0.4)
+      tl.to(intro, { autoAlpha: 0, duration: 0.5, ease: 'none' }, 0).add(hero(), 0).call(finish, [], 0.5)
       return
     }
 
-    tl.to('.intro-copy', { autoAlpha: 0, y: 8, duration: 0.25 }, 0)
-      .add(crack(seal), 0)
-      .to(flap, { rotateX: 180, duration: 0.6, ease: 'emilInOut' }, 0.14)
-      .set(flap, { zIndex: 0 }, 0.44)
-      .to('.envelope-wrap', { y: '7vh', duration: 0.7, ease: 'emilInOut', overwrite: 'auto' }, 0.4)
-      .to(letter, { yPercent: -54, duration: 0.7 }, 0.5)
-      // hold the card a beat so "The wedding of…" can be read before it dissolves
-      .to(intro.querySelectorAll('.env-part'), { yPercent: 60, autoAlpha: 0, duration: 0.5 }, 1.45)
-      .to(letter, { scale: 1.1, autoAlpha: 0, filter: 'blur(8px)', duration: 0.6 }, 1.5)
-      .to(['.intro-bg', '.intro .petals'], { autoAlpha: 0, duration: 0.65 }, 1.45)
-      .add(hero(), 1.35)
-      .call(finish, [], 2.1)
-      // everything above is written at brisk speed; TEMPO.opening sets the real pace
+    tl.to('.intro-copy', { autoAlpha: 0, y: 8, duration: 0.3 }, 0)
+      // the bud gives under your finger, then blooms ring by ring from the outside in
+      .to(wrap, { scale: 0.96, duration: 0.12, overwrite: 'auto' }, 0)
+      .to(wrap, { scale: 1, duration: 0.5 }, 0.12)
+      .to('.sepal', { scale: 1.3, autoAlpha: 0, duration: 0.7, svgOrigin: LOCAL }, 0.05)
+      .to('.rleaf', { scale: 1, duration: 1.3, svgOrigin: LOCAL }, 0.05)
+    rings.forEach((els, k) =>
+      tl.to(els, { scale: 1, rotation: 0, duration: 1.15, stagger: 0.035, svgOrigin: LOCAL }, 0.12 + k * 0.16),
+    )
+    tl.to('.rose-heart', { autoAlpha: 1, duration: 0.6 }, 0.8)
+      // fall into its golden heart — the light becomes the afternoon sun
+      .to('.rose-zoom', { scale: 16, svgOrigin: ORIGIN, duration: 1.3, ease: 'power2.in' }, 1.3)
+      .to('#intro-light', { autoAlpha: 1, scale: 1, duration: 0.75 }, 1.85)
+      .set(['.rose-wrap', '.intro-bg'], { autoAlpha: 0 }, 2.55)
+      .to('#intro-light', { autoAlpha: 0, duration: 1.1 }, 2.6)
+      .add(hero(), 2.5)
+      .call(finish, [], 2.85)
+      // written at brisk speed; TEMPO.opening sets the real pace
       .timeScale(1 / TEMPO.opening)
     stopHurry = hurryOnIntent(tl, intro)
   }
