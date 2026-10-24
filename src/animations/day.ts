@@ -245,9 +245,13 @@ export function setupDay(el: HTMLElement, reduced: boolean) {
   const heroText = () =>
     Math.max(0, ...['.hero .date-block', '.hero .scroll-cue'].map((s) => document.querySelector(s)?.getBoundingClientRect().bottom ?? 0)) + scrollY
   const setHero = (L: Layout) => {
-    for (const [target, vars] of frame(t, heroFor(L, heroText()), L)) gsap.set(target, vars)
+    hero = heroFor(L, heroText())
+    for (const [target, vars] of frame(t, hero, L)) gsap.set(target, vars)
     paint()
   }
+  /** With reduced motion the camera holds the hero's framing: the light changes, the view doesn't move. */
+  let hero = HERO
+  const framed = (m: Moment): Moment => (reduced ? { ...m, cam: hero.cam, camY: hero.camY } : m)
   setHero(place())
 
   const byId = (id: string) => document.getElementById(id)
@@ -292,16 +296,19 @@ export function setupDay(el: HTMLElement, reduced: boolean) {
       return Math.min(1, Math.max(0, (top + el.offsetHeight / 2 - innerHeight / 2) / max))
     }
     const position = (at: Stop['at']) => (at instanceof HTMLElement ? centre(at) : centre(at!.a) + (centre(at!.b) - centre(at!.a)) * at!.t)
-    const tl = gsap.timeline({ paused: true, defaults: { ease: 'none' }, onUpdate: paint })
+    // each change of light eases in and out between two cards, so the garden is
+    // all but still while you read one and moves while you scroll to the next
+    const tl = gsap.timeline({ paused: true, defaults: { ease: 'sine.inOut' }, onUpdate: paint })
     if (!progress) setHero(L)
     let t0 = 0
-    let from = heroFor(L, heroText())
+    hero = heroFor(L, heroText())
+    let from = hero
     for (const { at: where, m: to } of stops) {
       if (!where) continue
       const at = position(where)
       if (at > t0) {
-        const a = frame(t, from, L)
-        const b = frame(t, to, L)
+        const a = frame(t, framed(from), L)
+        const b = frame(t, framed(to), L)
         a.forEach(([target, vars], i) => tl.fromTo(target, { ...vars }, { ...b[i][1], duration: at - t0, immediateRender: false }, t0))
       }
       t0 = Math.max(t0, at)
@@ -309,9 +316,9 @@ export function setupDay(el: HTMLElement, reduced: boolean) {
     }
     if (t0 < 1) tl.to({}, { duration: 1 - t0 }, t0)
     tl.progress(progress)
-    // the light eases after your scroll rather than snapping with it — on a phone, a flick
-    // through two sections becomes a gentle change of light instead of a flash
-    trigger = ScrollTrigger.create({ animation: tl, start: 0, end: 'max', scrub: reduced ? true : touch ? 1.6 : 1 })
+    // the light follows your scroll with a short ease-out catch-up (a little longer on touch,
+    // where a flick covers more ground) so it never snaps, yet stays tied to your finger
+    trigger = ScrollTrigger.create({ animation: tl, start: 0, end: 'max', scrub: reduced ? true : touch ? 1.2 : 0.9 })
   }
   build()
   // The stage is sized to the large viewport, so a phone's toolbar sliding

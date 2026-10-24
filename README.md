@@ -75,21 +75,28 @@ src/
 Timings follow Emil Kowalski's design-engineering guidelines:
 
 - Entrances use a strong ease-out (`cubic-bezier(.23, 1, .32, 1)`), movement on
-  screen uses a strong ease-in-out; no `ease-in` on UI.
+  screen uses ease-in-out; no `ease-in` anywhere. The dive into the rose eases
+  the zoom's logarithm, so it glides evenly instead of lurching at the end.
+- Nothing grows from nothing: entrances start at 0.6–0.95 scale with opacity.
+  Exits are quicker than entrances (the light clearing, the fireflies drifting
+  off).
+- The opening is a once-per-visit ceremony (~3.8 s) and always interruptible:
+  a fresh scroll, swipe, tap or key eases it up to 4× speed. Returning guests
+  get the same bloom at 2.2× (~1.8 s). Pressing the rose gives way at once
+  (`scale(.97)`), and tapping it never snaps its breathing pose.
 - Calm reading: cards are always there (never popped in), keep one warm paper
   look all day and night, and hold still while the garden changes behind them.
-  On desktops text settles in with a short fade as it comes on screen; on touch
+  On desktops text settles in over 300 ms as it comes on screen; on touch
   screens, where a flick outruns any fade, text and numbers are simply shown.
-- Only the garden's time of day is scroll-scrubbed, and it eases after the
-  scroll (more so on touch), passing through sunset and dusk rather than
-  cutting from day to night.
+- Only the garden's time of day is scroll-scrubbed. Each change of light eases
+  in and out between two cards, so the garden is all but still while you read,
+  and it follows the scroll with a short ease-out catch-up rather than snapping.
 - The garden is painted once into canvases (at most 2× pixel density), so
   scrolling only moves and fades bitmaps — no repainting, even on phones.
 - Buttons press to `scale(.97)`; hover effects are gated behind
   `(hover: hover) and (pointer: fine)`.
-- Petals and swaying botanicals are CSS-only (transform + opacity) and pause
-  when off screen.
-- Native scrolling (no smooth-scroll library). The opening can always be cut
-  short: a fresh scroll, swipe, tap or key press plays the rest quickly.
+- Petals, butterflies, clouds and fireflies are CSS-only (transform + opacity).
+- Native scrolling (no smooth-scroll library).
 - Pacing lives in `src/animations/tempo.ts` (`opening` and `reveal`; higher = slower).
-- `prefers-reduced-motion`: no movement, opacity fades only.
+- `prefers-reduced-motion`: opacity fades only; the camera holds still while the
+  light still changes, and decorations that only make sense moving are left out.

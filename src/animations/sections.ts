@@ -1,6 +1,6 @@
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { TEMPO, slow } from './tempo'
+import { slow } from './tempo'
 
 const $ = <T extends Element = HTMLElement>(s: string, root: ParentNode = document) => root.querySelector<T>(s)
 const $$ = <T extends Element = HTMLElement>(s: string, root: ParentNode = document) => [...root.querySelectorAll<T>(s)]
@@ -13,7 +13,6 @@ const hideStroke = (els: Element[]) => gsap.set(els, { strokeDasharray: 1, strok
 const DRAW = { strokeDashoffset: 0, ease: 'power2.inOut' }
 
 export function setupSections(reduced: boolean) {
-  document.documentElement.style.setProperty('--tempo', String(TEMPO.reveal))
   reveals(reduced)
   if (reduced) {
     document.querySelectorAll('.ink').forEach((n) => n.classList.add('inked'))
@@ -26,7 +25,6 @@ export function setupSections(reduced: boolean) {
   palette()
   rsvp()
   footer()
-  countUp()
   events()
   heart()
   shooting()
@@ -49,19 +47,18 @@ function reveals(reduced: boolean) {
       slow(gsap.to(
         batch,
         reduced
-          ? { autoAlpha: 1, duration: 0.3, ease: 'none', stagger: 0.04 }
-          : { autoAlpha: 1, y: 0, duration: 0.45, ease: 'emilOut', stagger: 0.04, clearProps: 'transform' },
+          ? { autoAlpha: 1, duration: 0.3, ease: 'emilOut', stagger: 0.04 }
+          : { autoAlpha: 1, y: 0, duration: 0.3, ease: 'emilOut', stagger: 0.04, clearProps: 'transform' },
       )),
   })
 }
-
 
 function flourishes() {
   $$('.flourish').forEach((svg) => {
     const paths = $$('.draw', svg)
     const pop = $('.pop', svg)
     hideStroke(paths)
-    gsap.set(pop, { scale: 0.5, autoAlpha: 0, transformOrigin: '50% 50%' })
+    gsap.set(pop, { scale: 0.8, autoAlpha: 0, transformOrigin: '50% 50%' })
     const tl = slow(gsap.timeline({ paused: true }))
       .to(pop, { scale: 1, autoAlpha: 1, duration: 0.45, ease: 'emilOut' }, 0)
       .to(paths, { ...DRAW, duration: 0.9, stagger: 0.05 }, 0.08)
@@ -76,8 +73,9 @@ function wreath() {
   const berries = $$<SVGElement>('.dot', svg)
   const mono = $('.wreath-mono', svg)
   hideStroke($$('.stem', svg))
-  gsap.set(leaves, { scale: 0.3, autoAlpha: 0, transformOrigin: '0% 50%' })
-  gsap.set(berries, { scale: 0.5, autoAlpha: 0, transformOrigin: '50% 50%' })
+  // leaves unfurl from their stems rather than from nothing
+  gsap.set(leaves, { scale: 0.6, autoAlpha: 0, transformOrigin: '0% 50%' })
+  gsap.set(berries, { scale: 0.7, autoAlpha: 0, transformOrigin: '50% 50%' })
   gsap.set(mono, { autoAlpha: 0, y: 4 })
   const tl = slow(gsap.timeline({ paused: true })).to($$('.stem', svg), { ...DRAW, duration: 1.1 }, 0)
   ;[...leaves, ...berries].forEach((el) => tl.to(el, { scale: 1, autoAlpha: 1, duration: 0.4, ease: 'emilOut' }, 0.08 + Number(el.dataset.t) * 0.95))
@@ -85,14 +83,13 @@ function wreath() {
   once(svg, 'top 88%', () => tl.play())
 }
 
-/** A pen loop circles the day, just after the heading lands. */
+/** A pen loop circles the wedding day as it comes into view — no waiting for it. */
 function dateMark() {
   const path = $('.circle-mark .draw')
   if (!path) return
   hideStroke([path])
-  once(path.closest('h2')!, 'top 90%', () => slow(gsap.to(path, { ...DRAW, duration: 0.8, delay: 0.35 })))
+  once(path.closest('h2')!, 'top 92%', () => slow(gsap.to(path, { ...DRAW, duration: 0.7 })))
 }
-
 
 function venue() {
   const svg = $('.venue-art')
@@ -114,11 +111,11 @@ function palette() {
   if (!chips.length) return
   const dots = chips.map((c) => c.querySelector('.swatch')!)
   const labels = chips.map((c) => c.querySelector('span')!)
-  gsap.set(dots, { scale: 0.6, rotation: -25, autoAlpha: 0 })
+  gsap.set(dots, { scale: 0.85, rotation: -10, autoAlpha: 0 })
   gsap.set(labels, { autoAlpha: 0, y: 4 })
   once(chips[0].parentElement!, 'top 90%', () => {
     slow(gsap.to(dots, { scale: 1, rotation: 0, autoAlpha: 1, duration: 0.6, ease: 'emilOut', stagger: 0.06, clearProps: 'transform' }))
-    slow(gsap.to(labels, { autoAlpha: 1, y: 0, duration: 0.45, ease: 'emilOut', stagger: 0.06, delay: 0.15, clearProps: 'transform' }))
+    slow(gsap.to(labels, { autoAlpha: 1, y: 0, duration: 0.3, ease: 'emilOut', stagger: 0.06, delay: 0.08, clearProps: 'transform' }))
   })
 }
 
@@ -151,34 +148,12 @@ function footer() {
   )
 }
 
-/** Countdown rolls up from zero once, then ticks normally. */
-function countUp() {
-  const el = $('#countdown')
-  // rolling digits are flashing numbers on a phone; there they're simply shown
-  if (!el || matchMedia('(pointer: coarse)').matches) return
-  once(el, 'top 92%', () => {
-    $$('strong', el).forEach((s, i) => {
-      const target = Number(s.textContent) || 0
-      const o = { v: 0 }
-      slow(gsap.to(o, {
-        v: target,
-        duration: 1.1,
-        delay: i * 0.06,
-        ease: 'expo.out',
-        onUpdate: () => (s.textContent = String(Math.round(o.v)).padStart(2, '0')),
-      }))
-    })
-  })
-}
-
-
-
-/** The order of the day: each moment's icon draws itself as its card arrives. */
+/** The order of the day: each moment's icon draws itself as its card comes on screen. */
 function events() {
   for (const ev of $$('.event')) {
     const paths = $$('.t-icon .draw', ev)
     hideStroke(paths)
-    once(ev, 'top 72%', () => slow(gsap.to(paths, { ...DRAW, duration: 0.8, stagger: 0.08, delay: 0.2 })))
+    once(ev, 'top 90%', () => slow(gsap.to(paths, { ...DRAW, duration: 0.8, stagger: 0.08 })))
   }
 }
 
@@ -199,7 +174,8 @@ function heart() {
       gsap.to(ff, { x: cx + hx * size - ff.offsetLeft, y: cy + hy * size - ff.offsetTop, duration: 1.8, delay: i * 0.012, ease: 'emilInOut', overwrite: true })
     })
   }
-  const scatter = () => gsap.to(flies, { x: 0, y: 0, duration: 1.6, ease: 'emilInOut', stagger: 0.008, overwrite: true })
+  // leaving is quicker than gathering: the heart was the moment, drifting off isn't
+  const scatter = () => gsap.to(flies, { x: 0, y: 0, duration: 1, ease: 'emilInOut', stagger: 0.006, overwrite: true })
   ScrollTrigger.create({ trigger: rsvp, start: 'top 60%', end: 'bottom 35%', onEnter: gather, onEnterBack: gather, onLeave: scatter, onLeaveBack: scatter })
 }
 

@@ -12,8 +12,6 @@
   /* Emil Kowalski's curves */
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
-  /* set from TEMPO.reveal in animations/tempo.ts */
-  --tempo: 1;
 
   /* Cards are warm paper, day and night alike — a theme that flips mid-scroll reads as flashing */
   --card-bg: #fbf8f2c4;
@@ -53,11 +51,11 @@ h1:focus { outline: none; }
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .4 0 0 0 0 .35 0 0 0 0 .3 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-.eyebrow { margin: 0 auto; max-width: none; font: 400 11px/1.6 var(--sans); letter-spacing: 0.32em; text-transform: uppercase; color: var(--t-soft); transition: color 0.8s ease; }
-h2 { margin: 16px 0 22px; font: 300 clamp(36px, 5.6vw, 54px)/1.08 var(--serif); letter-spacing: -0.005em; color: var(--t-ink); transition: color 0.8s ease; }
+.eyebrow { margin: 0 auto; max-width: none; font: 400 11px/1.6 var(--sans); letter-spacing: 0.32em; text-transform: uppercase; color: var(--t-soft); }
+h2 { margin: 16px 0 22px; font: 300 clamp(36px, 5.6vw, 54px)/1.08 var(--serif); letter-spacing: -0.005em; color: var(--t-ink); }
 h2 em, .italic { font-style: italic; }
-h2 em { color: var(--t-accent); transition: color 0.8s ease; }
-p { margin: 0 auto; max-width: 32em; font-size: 20px; line-height: 1.7; color: var(--t-body); transition: color 0.8s ease; }
+h2 em { color: var(--t-accent); }
+p { margin: 0 auto; max-width: 32em; font-size: 20px; line-height: 1.7; color: var(--t-body); }
 .muted { color: var(--t-soft); }
 .small { margin-top: 14px; font: 300 14px/1.7 var(--sans); color: var(--t-soft); }
 
@@ -187,8 +185,11 @@ html.is-night .ff-dot { animation-play-state: running; }
 .intro[hidden] { display: none; }
 .intro-bg { position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 42%, #fcf8f1 0%, #f3e9dc 62%, #e9dccb 100%); }
 .rose-wrap { position: relative; z-index: 2; width: min(118vw, 640px); aspect-ratio: 1; margin-top: -6svh; }
-.rose { display: block; width: 100%; height: 100%; overflow: visible; animation: breathe 3.6s ease-in-out infinite alternate; }
-.is-opening .rose { animation: none; }
+.rose { display: block; width: 100%; height: 100%; overflow: visible; animation: breathe 3.6s ease-in-out infinite alternate; transition: scale 160ms var(--ease-out); }
+/* the bud gives under your finger while you press it */
+.rose-wrap:has(.rose-hit:active) .rose { scale: 0.97; }
+/* hold the breathing pose where it is: switching the animation off would snap the rose back */
+.is-opening .rose { animation-play-state: paused; }
 @keyframes breathe { from { transform: scale(1) rotate(0deg); } to { transform: scale(1.03) rotate(2deg); } }
 .rp-rim { fill: none; stroke: #ffffffa6; stroke-width: 1.2; }
 .rp-vein { fill: none; stroke: #aa646438; stroke-width: 0.9; }
@@ -227,7 +228,7 @@ html.is-night .ff-dot { animation-play-state: running; }
   border-radius: 50%;
   background: radial-gradient(circle, #fffdf7 0%, #fff6e0 38%, #fff0d200 70%);
   opacity: 0;
-  transform: scale(0.2);
+  transform: scale(0.6);
   pointer-events: none;
 }
 .intro-copy { position: absolute; z-index: 2; left: 0; right: 0; bottom: 12svh; display: grid; justify-items: center; gap: 16px; text-align: center; }
@@ -247,7 +248,6 @@ main { position: relative; z-index: 1; }
   border: 1px solid var(--card-border);
   border-radius: 6px;
   box-shadow: 0 40px 80px -40px var(--card-shadow);
-  transition: background-color 0.8s ease, border-color 0.8s ease, box-shadow 0.8s ease;
 }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   @media (min-width: 900px) {
@@ -282,8 +282,9 @@ main { position: relative; z-index: 1; }
 .date-block .big { font: 300 46px/1 var(--serif); letter-spacing: 0; padding: 0 20px; border-inline: 1px solid #b9ab92; }
 /* sits in the sky under the date; the hero camera keeps the mandap below it */
 .scroll-cue { margin: clamp(26px, 6svh, 56px) auto 0; display: grid; justify-items: center; gap: 12px; max-width: none; font: 400 10px var(--sans); letter-spacing: 0.3em; text-transform: uppercase; color: var(--ink); text-shadow: 0 1px 14px #fffaf0; }
-.scroll-cue i { width: 1px; height: 40px; background: linear-gradient(var(--ink), #3f463600); animation: cue 2.4s var(--ease-in-out) infinite; transform-origin: top; }
-@keyframes cue { 0% { transform: scaleY(0); opacity: 1; } 60% { transform: scaleY(1); opacity: 1; } 100% { transform: scaleY(1); opacity: 0; } }
+/* the line draws downwards (revealed by a clip, never grown from nothing), then fades */
+.scroll-cue i { width: 1px; height: 40px; background: linear-gradient(var(--ink), #3f463600); animation: cue 2.4s var(--ease-in-out) infinite; }
+@keyframes cue { 0% { clip-path: inset(0 0 100% 0); opacity: 1; } 60% { clip-path: inset(0); opacity: 1; } 100% { clip-path: inset(0); opacity: 0; } }
 
 /* Ink: a feathered mask sweeps left → right like a pen writing the name. */
 .ink {
@@ -436,6 +437,8 @@ main { position: relative; z-index: 1; }
 
 /* Reduced motion: no movement; colours still follow the day. */
 .reduced .stage .petals, .reduced .fireflies .ff-dot { animation: none; }
+/* decorations that only make sense moving are left out rather than frozen mid-air */
+.reduced .petals-day, .reduced .butterflies, .reduced .birds, .reduced .shooting { display: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; }
 }
