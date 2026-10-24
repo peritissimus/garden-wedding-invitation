@@ -75,8 +75,8 @@ export function render(root: HTMLElement) {
     <div class="date-block h-in h-late">
       <span>${esc(dateBlock[0])}</span><span class="big">${esc(dateBlock[1])}</span><span>${esc(dateBlock[2])}</span>
     </div>
+    <p class="scroll-cue h-in h-late"><span>Scroll to spend ${many ? 'both days' : 'the day'} with us</span><i></i></p>
   </div>
-  <p class="scroll-cue h-in h-late"><span>Scroll to spend ${many ? 'both days' : 'the day'} with us</span><i></i></p>
 </section>
 
 <section class="beat" id="story">

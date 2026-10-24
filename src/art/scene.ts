@@ -7,7 +7,7 @@ import { petalPath } from './rose'
  *
  *   sky      stars, sun, moon, clouds                           (no camera)
  *   back     hills, haze, glasshouse, trees, hedges, far lights (camera ×0.6)
- *   front    lawn, aisle, chairs, urns, beds, the rose arch     (camera ×1)
+ *   front    lawn, aisle, chairs, urns, beds, the mandap        (camera ×1)
  *   fg       out-of-focus roses framing the bottom corners      (camera ×1.3)
  *   glows    the lights themselves — never colour-graded
  *   fx       sunbeams and night bokeh
@@ -26,7 +26,7 @@ export interface Art {
 }
 
 const AX = 800
-const FOOT = 760 // where the arch stands
+const FOOT = 760 // where the mandap stands
 const VP = 744 // vanishing point of the lawn stripes and aisle
 
 type Rand = () => number
@@ -43,7 +43,7 @@ function leafAt(x: number, y: number, L: number, W: number, a: number) {
 }
 
 /** Garden rose facing us: four rings of the same petals as the opening rose. */
-export function rosette(x: number, y: number, R: number, rot: number, tone: 'blush' | 'ivory' | 'peach') {
+export function rosette(x: number, y: number, R: number, rot: number, tone: keyof typeof ROSE_TONES) {
   const rings: [number, number, number][] = [
     [6, 1, 0],
     [5, 0.74, 30],
@@ -263,7 +263,7 @@ export function back(): Art {
     if (x > 1150 && x < 1330) continue // keep the glasshouse clear
     woods += oak(r, x, y + 18, 16 + r() * 14, hazy)
   }
-  // the treeline proper: oaks and poplars, smaller behind the arch so it reads against the sky
+  // the treeline proper: oaks and poplars, smaller behind the mandap so it reads against the sky
   let trees = ''
   let x = -60
   while (x < 1680) {
@@ -306,13 +306,14 @@ ${strandArt(BACK_STRAND)}
 }
 
 /* ------------------------------------------------------------------ */
-/* Front: lawn, aisle, chairs, beds, urns, lanterns, the rose arch    */
+/* Front: lawn, aisle, chairs, beds, urns, lanterns, the mandap       */
 /* ------------------------------------------------------------------ */
 
 const ROSE_TONES = {
   blush: [['#e3a5a0', '#fbe6e1'], ['#d99491', '#f6d4cf'], ['#cf8486', '#efc3bf'], ['#c27478', '#e6aeb0'], '#b9686f'],
   ivory: [['#e6d9c6', '#fffbf4'], ['#dfcfb8', '#fdf5e9'], ['#d6c4aa', '#f8eddd'], ['#ccb89b', '#f1e3cf'], '#c4ad8a'],
   peach: [['#eab08f', '#fde6d6'], ['#e3a183', '#f9d8c3'], ['#db9377', '#f3c8af'], ['#d0846a', '#ecb69b'], '#c4775e'],
+  lilac: [['#c7aed6', '#f4ebf8'], ['#bea2cf', '#eee2f4'], ['#b394c6', '#e6d6ee'], ['#a787bb', '#dccbe6'], '#9b78ae'],
 } as const
 
 const roseDefs = () =>
@@ -401,108 +402,193 @@ function urn(x: number, y: number, s: number) {
   )
 }
 
-/** Point on the arch centreline: u 0 = left foot, .5 = crown, 1 = right foot. */
-function archPoint(u: number) {
-  const post = FOOT - 520
-  const arc = Math.PI * 84
-  const d = u * (2 * post + arc)
-  if (d < post) return { x: 716, y: FOOT - d, nx: -1, ny: 0 }
-  if (d < post + arc) {
-    const t = Math.PI + (d - post) / 84
-    return { x: AX + 84 * Math.cos(t), y: 520 + 84 * Math.sin(t), nx: Math.cos(t), ny: Math.sin(t) }
-  }
-  return { x: 884, y: 520 + (d - post - arc), nx: 1, ny: 0 }
-}
+/* The mandap: four white fan columns — a slim cage bound in gold flaring
+   into pleated blades — crowned with pastel flowers and wild grasses, with a
+   floral chandelier hanging in the middle. */
 
-/** Lush asymmetric garland: heavy over the crown and down the left, a second cluster on the right. */
-const archWeight = (u: number) =>
-  0.18 + 1.1 * Math.exp(-(((u - 0.36) / 0.13) ** 2)) + 0.75 * Math.exp(-(((u - 0.74) / 0.07) ** 2)) + 0.35 * Math.exp(-(((u - 0.1) / 0.08) ** 2))
-
-function sampleArch(r: Rand) {
-  for (;;) {
-    const u = r()
-    if (r() * 1.6 < archWeight(u)) return u
-  }
-}
-
-/** Points for the fairy lights woven through the garland (filled while drawing the arch). */
+/** Points for the fairy lights woven through the flowers (filled while drawing the mandap). */
 const FAIRY: { x: number; y: number }[] = []
+/** The rim of the front fans, and the crystal chandelier hanging between them. */
+export const MANDAP = { top: 532, chandelier: { x: AX, y: 606 } }
 
-function arch(r: Rand) {
-  const tones = ['#4f7349', '#628a57', '#79a068', '#97b980']
-  const leaves = ['', '', '', '']
-  const fillers: string[] = []
-  const roses: string[] = []
-  for (let i = 0; i < 560; i++) {
-    const p = archPoint(sampleArch(r))
-    const off = gauss(r) * 14
-    const x = p.x + p.nx * off + (r() - 0.5) * 8
-    const y = p.y + p.ny * off + (r() - 0.5) * 8
-    leaves[Math.floor(r() * 4)] += leafAt(x, y, 9 + r() * 9, 3.2 + r() * 2.6, r() * Math.PI * 2)
+const LEAF_TONES = ['#4f7349', '#628a57', '#79a068', '#97b980']
+/** Tiny florets: baby's breath, lilac hydrangea, pale yellow and blush. */
+const FLORETS = ['#fffdf8', '#fffdf8', '#e4d8f2', '#f5e6a6', '#f6d3db']
+const BLOOMS = ['blush', 'ivory', 'lilac', 'blush', 'ivory', 'lilac', 'peach'] as const
+
+/**
+ * A fan column standing on `ground` at `cx`, `k` times full size: a slim cage
+ * bound in gold, flaring into a fluted white fan whose rim is a row of pointed
+ * petal tips. The fan is one sculpted shape, shaded round like a cone, with
+ * embossed creases running up from the waist between the petals.
+ */
+function fanColumn(cx: number, ground: number, k: number) {
+  const waist = ground - 112 * k
+  const top = waist - 118 * k
+  const W = 66 * k
+  /** the cage narrows from 15 at the ground to 7 at the waist */
+  const hw = (y: number) => (7 + (8 * (y - waist)) / (ground - waist)) * k
+  let slats = ''
+  for (let j = -2; j <= 2; j++) slats += `M${f(cx + (j / 2) * hw(ground))} ${f(ground)}L${f(cx + (j / 2) * hw(waist))} ${f(waist)}`
+  let art = `<path d="${slats}" fill="none" stroke="#f6f4ee" stroke-width="${f(2.6 * k)}"/><path d="${slats}" fill="none" stroke="#c3c9d1" stroke-width="${f(0.8 * k)}" transform="translate(${f(1.1 * k)} 0)"/>`
+  for (const y of [ground - 5 * k, (ground + waist) / 2, waist + 3 * k])
+    art += `<ellipse cx="${f(cx)}" cy="${f(y)}" rx="${f(hw(y) + 1.5 * k)}" ry="${f(2.2 * k)}" fill="none" stroke="#c9a24a" stroke-width="${f(1.5 * k)}"/>`
+  // the rim: petal tips with creases (valleys) between them; the outer ones curl out and down
+  const N = 13
+  const rim = (u: number, dip: number) => [cx + u * W * (1.04 + 0.08 * Math.abs(u) ** 3), top + Math.abs(u) ** 1.5 * 30 * k + dip] as const
+  const tips = Array.from({ length: N }, (_, i) => rim((i / (N - 1)) * 2 - 1, 0))
+  const valleys = Array.from({ length: N - 1 }, (_, i) => rim(((i + 0.5) / (N - 1)) * 2 - 1, 11 * k))
+  const neck = waist + 4 * k
+  const P = (p: readonly [number, number]) => `${f(p[0])} ${f(p[1])}`
+  // sides bow outwards like a trumpet; between tips the rim scallops down into each crease
+  let d = `M${f(cx - 6 * k)} ${f(neck)}Q${f(cx - W * 0.16)} ${f(top + (waist - top) * 0.42)} ${P(tips[0])}`
+  for (let i = 0; i < N - 1; i++) {
+    const [vx, vy] = valleys[i]
+    d += `Q${f((tips[i][0] + vx) / 2)} ${f(Math.min(tips[i][1], vy) - 2 * k)} ${f(vx)} ${f(vy)}Q${f((vx + tips[i + 1][0]) / 2)} ${f(Math.min(vy, tips[i + 1][1]) - 2 * k)} ${P(tips[i + 1])}`
   }
-  // trailing tendrils hanging from the crown cluster
-  let tendrils = ''
-  for (const [x0, y0, len] of [
-    [742, 470, 120],
-    [760, 452, 70],
-    [858, 470, 90],
-  ]) {
-    tendrils += `M${x0} ${y0}C${x0 - 8} ${y0 + len * 0.4} ${x0 + 10} ${y0 + len * 0.7} ${x0 - 2} ${y0 + len}`
-    for (let k = 0; k < 9; k++) {
-      const t = k / 9
-      leaves[k % 4] += leafAt(x0 + Math.sin(t * 5) * 5, y0 + len * t, 8, 3, (k % 2 ? 0.6 : 2.5) + r() * 0.4)
-    }
+  d += `Q${f(cx + W * 0.16)} ${f(top + (waist - top) * 0.42)} ${f(cx + 6 * k)} ${f(neck)}Z`
+  art += `<path d="${d}" fill="url(#fanG)" stroke="#c9ced8" stroke-width="${f(0.6 * k)}"/>`
+  // creases: a shadowed groove with a highlight beside it, from the waist up into each valley
+  let grooves = ''
+  for (const v of valleys) {
+    const u = (v[0] - cx) / W
+    grooves += `M${f(cx + u * 4 * k)} ${f(neck)}Q${f(cx + u * W * 0.22)} ${f(top + (waist - top) * 0.45)} ${P(v)}`
   }
-  // roses clustered where the garland is heaviest
-  const kinds = ['blush', 'blush', 'ivory', 'peach'] as const
-  for (let i = 0; i < 30; i++) {
-    const p = archPoint(sampleArch(r))
-    const off = gauss(r) * 8
-    roses.push(rosette(p.x + p.nx * off, p.y + p.ny * off, 8 + r() * 9, r() * 72, kinds[Math.floor(r() * kinds.length)]))
-    if (i % 3 === 0) FAIRY.push({ x: p.x + p.nx * (off + 10), y: p.y + p.ny * (off + 10) })
-  }
-  for (let i = 0; i < 160; i++) {
-    const p = archPoint(sampleArch(r))
-    const off = gauss(r) * 16
-    fillers.push(circle(p.x + p.nx * off, p.y + p.ny * off, 1.4 + r() * 1.2))
-    if (i % 4 === 0) FAIRY.push({ x: p.x + p.nx * off, y: p.y + p.ny * off })
-  }
-  // floral arrangements at each foot
-  const foot = (cx: number) => {
-    let s = ''
-    for (let i = 0; i < 150; i++) {
-      const a = r() * Math.PI
-      const d = Math.sqrt(r())
-      leaves[Math.floor(r() * 4)] += leafAt(cx + Math.cos(a) * d * 58 * (r() < 0.5 ? -1 : 1), FOOT - Math.sin(a) * d * 34, 10 + r() * 10, 3.6 + r() * 2.8, r() * Math.PI * 2)
-    }
-    for (let i = 0; i < 7; i++) s += rosette(cx + (r() - 0.5) * 70, FOOT - 6 - r() * 26, 11 + r() * 9, r() * 72, kinds[Math.floor(r() * kinds.length)])
-    for (let i = 0; i < 40; i++) fillers.push(circle(cx + (r() - 0.5) * 90, FOOT - r() * 36, 1.5 + r() * 1.4))
-    return s
-  }
-  const feet = foot(716) + foot(884)
-  // chiffon drapes hanging from the crown corners
-  const drape = (m: 1 | -1) => {
-    const X = (dx: number) => f(AX + m * dx)
-    return `<path d="M${X(-88)} 478C${X(-94)} 560 ${X(-108)} 660 ${X(-118)} 760Q${X(-110)} 766 ${X(-102)} 760Q${X(-94)} 766 ${X(-86)} 760Q${X(-78)} 766 ${X(-70)} 760Q${X(-62)} 766 ${X(-56)} 760C${X(-62)} 660 ${X(-70)} 560 ${X(-76)} 478Z" fill="url(#chiffon)" opacity=".88"/>`
-  }
-  const frame = `M711 ${FOOT}V520A89 89 0 0 1 889 520V${FOOT}H879V520A79 79 0 0 0 721 520V${FOOT}Z`
-  return `<g class="rose-arch">
-<path d="${frame}" fill="url(#chairG)"/>
-${drape(1)}${drape(-1)}
-<path d="${tendrils}" fill="none" stroke="#5f8455" stroke-width="1.4"/>
-${leaves.map((d, i) => `<path d="${d}" fill="${tones[i]}"/>`).join('')}
-<path d="${fillers.join('')}" fill="#fffdf8"/>
-${roses.join('')}${feet}
-</g>`
+  art += `<path d="${grooves}" fill="none" stroke="#c8cdd8" stroke-width="${f(1.1 * k)}"/><path d="${grooves}" fill="none" stroke="#ffffff" stroke-width="${f(0.8 * k)}" opacity=".9" transform="translate(${f(1.3 * k)} 0)"/>`
+  return { art, top, W }
 }
 
-const SIDE_STRANDS = [strand(-60, 456, 330, 612, 724, 470, 16, 0, 0.45), strand(876, 470, 1270, 612, 1660, 456, 16, 0.12, 0.45)]
+/** Greenery, ferns, florets and roses for one layer of the mandap, painted back to front. */
+function bouquet(r: Rand) {
+  const leaves = ['', '', '', '']
+  const florets: Record<string, string> = {}
+  let stems = ''
+  let roses = ''
+  const inside = (cx: number, cy: number, rx: number, ry: number) => {
+    const a = r() * Math.PI * 2
+    const d = Math.sqrt(r())
+    return [cx + Math.cos(a) * d * rx, cy + Math.sin(a) * d * ry] as const
+  }
+  const leaf = (x: number, y: number, L: number, W: number, a: number, tone = Math.floor(r() * 4)) => (leaves[tone] += leafAt(x, y, L, W, a))
+  const floret = (x: number, y: number, k: number) => {
+    const c = FLORETS[Math.floor(r() * FLORETS.length)]
+    florets[c] = (florets[c] ?? '') + circle(x, y, (1.1 + r() * 1.3) * k)
+  }
+  /** a frond arching out of the flowers, leaflets in pairs along it */
+  const fern = (x: number, y: number, len: number, a: number, k: number) => {
+    const bend = (r() - 0.5) * 0.8
+    const at = (t: number) => {
+      const b = a + bend * t
+      return [x + Math.cos(b) * len * t, y + Math.sin(b) * len * t, b] as const
+    }
+    const [ex, ey] = at(1)
+    const [mx, my] = at(0.5)
+    stems += `M${f(x)} ${f(y)}Q${f(mx * 2 - (x + ex) / 2)} ${f(my * 2 - (y + ey) / 2)} ${f(ex)} ${f(ey)}`
+    const tone = 2 + Math.floor(r() * 2)
+    for (let t = 0.25; t < 1; t += 0.14) {
+      const [px, py, b] = at(t)
+      for (const side of [-1, 1]) leaf(px, py, 6 * k * (1.1 - t * 0.6), 1.8 * k, b + side * 0.95, tone)
+    }
+  }
+  return {
+    inside,
+    leaf,
+    floret,
+    /** a mound of flowers filling an ellipse, with ferns arching out of its top */
+    heap(cx: number, cy: number, rx: number, ry: number, k: number, lush = 1, ferns = 1) {
+      const n = Math.max(3, Math.round(((rx * ry) / 60) * lush))
+      for (let i = 0; i < n * 4; i++) {
+        const [x, y] = inside(cx, cy, rx * 1.08, ry * 1.15)
+        leaf(x, y, (8 + r() * 9) * k, (3 + r() * 2.4) * k, r() * Math.PI * 2)
+      }
+      for (let i = 0; i < n * 0.5 * ferns; i++) {
+        const [x, y] = inside(cx, cy - ry * 0.4, rx * 0.95, ry * 0.6)
+        // fronds lean away from the middle of the heap, like spilling over
+        const lean = ((x - cx) / rx) * 1.1
+        fern(x, y, (16 + r() * 22) * k, -Math.PI / 2 + lean + (r() - 0.5) * 0.7, k)
+      }
+      for (let i = 0; i < n * 3; i++) floret(...inside(cx, cy, rx, ry), k)
+      for (let i = 0; i < n * 0.7; i++) {
+        const [x, y] = inside(cx, cy, rx * 0.9, ry * 0.85)
+        roses += rosette(x, y, (6 + r() * 8) * k, r() * 72, BLOOMS[Math.floor(r() * BLOOMS.length)])
+      }
+    },
+    paint: () =>
+      `<path d="${stems}" fill="none" stroke="#6f8f5c" stroke-width=".9" stroke-linecap="round"/>` +
+      leaves.map((d, i) => `<path d="${d}" fill="${LEAF_TONES[i]}"/>`).join('') +
+      Object.entries(florets)
+        .map(([c, d]) => `<path d="${d}" fill="${c}"/>`)
+        .join('') +
+      roses,
+  }
+}
+
+function mandap(r: Rand) {
+  const G = FOOT + 2
+  const far = bouquet(r)
+  const near = bouquet(r)
+  const feet = bouquet(r)
+  let art = `<ellipse cx="${AX}" cy="${G + 2}" rx="210" ry="12" fill="#2c3a22" opacity=".12"/>`
+  // the two fans behind, a little smaller and peeking out at the sides
+  for (const m of [-1, 1]) {
+    const x = AX + m * 138
+    const c = fanColumn(x, G - 10, 0.74)
+    art += c.art
+    far.heap(x, c.top + 9, c.W * 0.85, 10, 0.74, 1.8)
+    far.heap(x + m * c.W * 0.7, c.top + 26, 12, 16, 0.74, 1.2, 0.5) // spilling down the outside
+    far.heap(x, G - 34, 30, 24, 0.74, 1.4, 0.6)
+    for (let i = 0; i < 3; i++) FAIRY.push(pt(far.inside(x, c.top + 8, c.W * 0.8, 6)))
+  }
+  art += far.paint()
+  // the two in front
+  for (const m of [-1, 1]) {
+    const x = AX + m * 92
+    const c = fanColumn(x, G, 1)
+    art += c.art
+    near.heap(x, c.top + 10, c.W * 0.86, 14, 1, 1.9)
+    near.heap(x + m * c.W * 0.72, c.top + 30, 14, 20, 1, 1.3, 0.5)
+    for (let i = 0; i < 6; i++) FAIRY.push(pt(near.inside(x, c.top + 8, c.W * 0.85, 9)))
+    // flowers heaped round the foot of the cage and climbing it
+    feet.heap(x, G - 32, 48, 28, 1, 1.5, 0.6)
+    feet.heap(x, G - 74, 16, 20, 0.9, 1.3, 0.4)
+  }
+  // a dome of flowers bridging the front fans, the chandelier hanging beneath it
+  const { top, chandelier: ch } = MANDAP
+  near.heap(AX, top + 12, 40, 12, 1, 1.8)
+  near.heap(AX, top + 30, 26, 18, 1, 1.8, 0.3)
+  for (let i = 0; i < 16; i++) near.leaf(AX + (r() - 0.5) * 34, top + 40 + r() * 16, 7 + r() * 6, 2.6 + r() * 1.8, Math.PI / 2 + (r() - 0.5) * 1.2)
+  for (let i = 0; i < 4; i++) FAIRY.push(pt(near.inside(AX, top + 20, 34, 14)))
+  art += near.paint()
+  // two tiers of crystal drops under a glass bowl
+  let drops = ''
+  let strings = ''
+  for (const [n, w, sag, len] of [
+    [13, 36, 9, 5],
+    [7, 18, 6, 13],
+  ]) {
+    for (let i = 0; i < n; i++) {
+      const x = ch.x - w / 2 + (i * w) / (n - 1)
+      const y = ch.y + len + Math.sin((i / (n - 1)) * Math.PI) * sag
+      strings += `M${f(x)} ${f(ch.y + 3)}V${f(y - 1.6)}`
+      drops += `M${f(x)} ${f(y - 2.4)}l1.5 2.4-1.5 2.4-1.5-2.4Z`
+    }
+  }
+  art += `<path d="M${ch.x} ${top + 46}V${ch.y - 9}" stroke="#c9a24a" stroke-width="1"/>
+<ellipse cx="${ch.x}" cy="${ch.y - 7}" rx="9" ry="2.8" fill="none" stroke="#c9a24a" stroke-width="1.2"/>
+<path d="${strings}" stroke="#dfe7ef" stroke-width=".6"/>
+<path d="M${ch.x - 21} ${ch.y}Q${ch.x} ${ch.y + 17} ${ch.x + 21} ${ch.y}Q${ch.x} ${ch.y - 8} ${ch.x - 21} ${ch.y}Z" fill="url(#crystalG)" stroke="#d5dde6" stroke-width=".8"/>
+<path d="${drops}" fill="#f7fbff" stroke="#c4d0dd" stroke-width=".5"/>`
+  return `<g class="mandap">${art}${feet.paint()}</g>`
+}
+const pt = ([x, y]: readonly [number, number]) => ({ x, y })
+
+const SIDE_STRANDS = [strand(-60, 456, 300, 640, 613, 590, 16, 0, 0.45), strand(987, 590, 1300, 640, 1660, 456, 16, 0.12, 0.45)]
 /** Lantern positions (filled while drawing the front layer) so their flames can glow. */
 const LANTERNS: { x: number; y: number; s: number; i: number }[] = []
 
 export function front(): Art {
   const r = rng(21)
-  // lawn with mown stripes converging on the arch
+  // lawn with mown stripes converging on the mandap
   let stripes = ''
   for (let i = 0; i < 16; i += 2) {
     const a = -500 + i * 160
@@ -533,7 +619,7 @@ export function front(): Art {
   const lanterns = LANTERNS.map((l) => lantern(l.x, l.y, l.s)).join('')
   const strands = SIDE_STRANDS.map(strandArt).join('')
   FAIRY.length = 0
-  const archArt = arch(r)
+  const mandapArt = mandap(r)
   return {
     defs: `${roseDefs()}${HEDGE_TEX}
 <linearGradient id="lawnG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a6c288"/><stop offset=".5" stop-color="#8fb072"/><stop offset="1" stop-color="#729760"/></linearGradient>
@@ -543,7 +629,8 @@ export function front(): Art {
 <linearGradient id="sashG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0c3c0"/><stop offset="1" stop-color="#dc9f9f"/></linearGradient>
 <linearGradient id="stoneG" x1="0" x2="1"><stop offset="0" stop-color="#e2dccf"/><stop offset=".6" stop-color="#f3efe6"/><stop offset="1" stop-color="#d1c9b9"/></linearGradient>
 <radialGradient id="ballG" cx=".62" cy=".3" r=".8"><stop offset="0" stop-color="#a9c792"/><stop offset=".55" stop-color="#6f9161"/><stop offset="1" stop-color="#486743"/></radialGradient>
-<linearGradient id="chiffon" x1="0" x2="1"><stop offset="0" stop-color="#ffffff" stop-opacity=".55"/><stop offset=".22" stop-color="#efe9e2" stop-opacity=".85"/><stop offset=".45" stop-color="#ffffff" stop-opacity=".6"/><stop offset=".68" stop-color="#ebe4dc" stop-opacity=".85"/><stop offset="1" stop-color="#ffffff" stop-opacity=".6"/></linearGradient>`,
+<linearGradient id="fanG" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#d7dae4"/><stop offset=".3" stop-color="#f4f4f6"/><stop offset=".55" stop-color="#ffffff"/><stop offset=".85" stop-color="#e9eaf0"/><stop offset="1" stop-color="#cfd3de"/></linearGradient>
+<linearGradient id="crystalG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#dbe5f0"/></linearGradient>`,
     body: `<path d="M-40 770C400 760 1200 760 1640 770V1010H-40Z" fill="url(#lawnG)"/>
 <path d="${stripes}" fill="#ffffff" opacity=".07" clip-path="url(#lawnClip)"/>
 ${border(r, -40, 650)}${border(r, 950, 1640)}
@@ -554,8 +641,8 @@ ${urn(150, 800, 0.95)}${urn(460, 794, 0.8)}${urn(1140, 794, 0.8)}${urn(1450, 800
 ${chairs}
 ${lanterns}
 ${strands}
-${archArt}`,
-    // from the top of the garland down to the nearest row of chairs
+${mandapArt}`,
+    // from the grasses on the mandap down to the nearest row of chairs
     box: [-40, 380, 1640, 1045],
   }
 }
@@ -647,7 +734,7 @@ const bulbs = (bs: { x: number; y: number; i: number }[], r: number): GlowGroup[
     ],
   }))
 
-/** Lights in the far garden: the glasshouse windows and the strand behind the arch. */
+/** Lights in the far garden: the glasshouse windows and the strand behind the mandap. */
 export function glowBack(): GlowGroup[] {
   const x = 1240
   const g = 660
@@ -667,14 +754,21 @@ export function glowBack(): GlowGroup[] {
   ]
 }
 
-/** Lights around the aisle: a warm wash under the arch, the side strands and the lanterns. (Call after front().) */
+/** Lights around the aisle: a warm wash under the mandap, its chandelier, the side strands and the lanterns. (Call after front().) */
 export function glowFront(): GlowGroup[] {
   return [
     {
       i: 0.3,
       ops: [
-        { k: 'warm', x: AX, y: FOOT - 70, rx: 150, ry: 190, a: 0.5 },
+        { k: 'warm', x: AX, y: FOOT - 110, rx: 200, ry: 150, a: 0.45 },
         { k: 'warm', x: AX, y: FOOT + 30, rx: 230, ry: 60, a: 0.35 },
+      ],
+    },
+    {
+      i: 0.25,
+      ops: [
+        { k: 'bulb', x: MANDAP.chandelier.x, y: MANDAP.chandelier.y + 3, rx: 40, ry: 40, a: 1 },
+        { k: 'shape', d: ellipsePath(MANDAP.chandelier.x, MANDAP.chandelier.y + 3, 9, 4), fill: '#fff6dc', a: 0.9 },
       ],
     },
     ...SIDE_STRANDS.flatMap((st) => bulbs(st.bulbs, 22)),
@@ -702,7 +796,7 @@ export function fairyLights(): [GlowGroup, GlowGroup] {
   return sets
 }
 /** Where the fairy lights are, to size their canvases. */
-export const FAIRY_BOX: Art['box'] = [640, 380, 960, 790]
+export const FAIRY_BOX: Art['box'] = [590, 470, 1010, 800]
 
 /** Sunbeams fanning out from the sun (centred on 0,0) and soft bokeh at the bottom corners after dark. */
 export function fx(): { rays: Art; bokeh: Art } {

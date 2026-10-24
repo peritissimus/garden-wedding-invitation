@@ -65,36 +65,78 @@ export const circleMark = () =>
     'M20 5.5C9 6.5 2.5 13 3.2 21c.8 9 12.5 14 27 13.2 14.8-.8 26.4-7.8 25.6-17C55 8.2 43 3 29 3.8 20 4.3 13.5 8 10.5 12.5',
   )}</svg>`
 
-/** Line-art glasshouse with topiaries, drawn stroke by stroke. */
+/**
+ * Line drawing of the mandap, drawn stroke by stroke: fan columns (a slim
+ * cage flaring into a fluted fan) crowned with flowers, a chandelier hanging
+ * between the front two, flowers heaped at their feet.
+ */
 export function venueArt() {
-  const lines = [
-    'M6 150H314',
-    'M104 150V94H216V150',
-    'M98 94H222',
-    'M100 94Q160 34 220 94',
-    'M160 64V94M130 71.5Q133 82 134 94M190 71.5Q187 82 186 94',
-    'M154 64V58H166V64M152 58H168M160 58V51',
-    circle(160, 48.5, 2.5),
-    'M122 94V150M140 94V150M180 94V150M198 94V150M104 116H146M174 116H216',
-    'M148 150V126A12 12 0 0 1 172 126V150M160 114V150',
-    'M60 150V112L104 100M74 150V108.2M88 150V104.4',
-    'M260 150V112L216 100M246 150V108.2M232 150V104.4',
-    'M40 150V128M280 150V128',
-    circle(40, 114, 14),
-    circle(280, 114, 14),
-    'M33 150V142H47V150M273 150V142H287V150',
-    'M6 150c2.5-6 7.5-6 10 0c2.5-6 7.5-6 10 0M294 150c2.5-6 7.5-6 10 0c2.5-6 7.5-6 10 0',
-    'M152 150L138 170M168 150L182 170',
-    'M58 40q4-4 8 0q4-4 8 0M244 30q3-3 6 0q3-3 6 0',
-  ]
-  const fills = [
-    '<path class="glass" d="M100 94Q160 34 220 94Z"/>',
-    '<path class="glass" d="M104 150V94H216V150Z"/>',
-    '<path class="glass" d="M60 150V112L104 100V150Z"/>',
-    '<path class="glass" d="M260 150V112L216 100V150Z"/>',
-    `<path class="tree" d="${circle(40, 114, 14)}"/>`,
-    `<path class="tree" d="${circle(280, 114, 14)}"/>`,
-  ]
+  const lines = ['M8 160H312']
+  const fills: string[] = []
+  const P = (x: number, y: number) => `${f(x)} ${f(y)}`
+  const fill = (cls: string, d: string) => fills.push(`<path class="${cls}" d="${d}"/>`)
+  const blooms = (pts: [number, number, number][]) => {
+    lines.push(pts.map(([x, y, r]) => circle(x, y, r)).join(''))
+    pts.forEach(([x, y, r], i) => fill(['blush', 'lilac', 'ivory'][i % 3], circle(x, y, r)))
+  }
+  const fan = (cx: number, ground: number, k: number) => {
+    const waist = ground - 50 * k
+    const top = waist - 56 * k
+    const W = 36 * k
+    lines.push(`M${P(cx - 6 * k, ground)}L${P(cx - 3 * k, waist)}M${P(cx, ground)}V${f(waist)}M${P(cx + 6 * k, ground)}L${P(cx + 3 * k, waist)}`)
+    lines.push(ellipse(cx, waist + 2 * k, 5 * k, 1.6 * k))
+    // the fan: sides bowing out like a trumpet, the rim a row of pointed petal tips
+    const N = 7
+    const rim = (u: number, dip: number) => [cx + u * W * 1.06, top + Math.abs(u) ** 1.5 * 12 * k + dip] as const
+    const tips = Array.from({ length: N }, (_, i) => rim((i / (N - 1)) * 2 - 1, 0))
+    const valleys = Array.from({ length: N - 1 }, (_, i) => rim(((i + 0.5) / (N - 1)) * 2 - 1, 4.5 * k))
+    let d = `M${P(cx - 3 * k, waist)}Q${P(cx - W * 0.18, top + (waist - top) * 0.45)} ${P(...tips[0])}`
+    // each petal's sides bulge a little, so the rim reads as soft pointed petals
+    const arc = (a: readonly [number, number], b: readonly [number, number]) => `Q${P((a[0] + b[0]) / 2, (a[1] + b[1]) / 2 - 1.6 * k)} ${P(...b)}`
+    valleys.forEach((v, i) => (d += arc(tips[i], v) + arc(v, tips[i + 1])))
+    d += `Q${P(cx + W * 0.18, top + (waist - top) * 0.45)} ${P(cx + 3 * k, waist)}Z`
+    lines.push(d)
+    fill('fan', d)
+    lines.push(valleys.map(([x, y]) => `M${P(cx + ((x - cx) / W) * 2 * k, waist)}Q${P(cx + (x - cx) * 0.25, top + (waist - top) * 0.45)} ${P(x, y)}`).join(''))
+    // flowers on the rim, leaves tucked between
+    const n = k > 0.9 ? 7 : 4
+    blooms(
+      Array.from({ length: n }, (_, i) => {
+        const u = (i / (n - 1)) * 2 - 1
+        return [cx + u * W * 0.82, top - 1.5 * k + Math.abs(u) ** 1.5 * 9 * k + (i % 2 ? -2.5 : 0.5) * k, (4.2 + (i % 3) * 0.6) * k] as [number, number, number]
+      }),
+    )
+    if (k > 0.9) {
+      const leaves = [-1, 1].map((m) => `<path class="sage" d="${leaf(9, 3)}" transform="translate(${P(cx + m * W * 0.9, top + 1)}) rotate(${m > 0 ? -25 : 205})"/>`)
+      fills.push(...leaves)
+      lines.push([-1, 1].map((m) => `M${P(cx + m * W * 0.9, top + 1)}l${P(m * 8, -3.5)}`).join(''))
+    }
+    // a heap of flowers at the foot
+    blooms(
+      k > 0.9
+        ? [
+            [cx - 7, ground - 5, 4.6],
+            [cx + 6, ground - 6, 5],
+            [cx, ground - 13, 4.2],
+          ]
+        : [
+            [cx - 4, ground - 4, 3.4],
+            [cx + 4, ground - 5, 3.6],
+          ],
+    )
+    return top
+  }
+  for (const m of [-1, 1]) fan(160 + m * 114, 155, 0.74)
+  const top = fan(112, 160, 1)
+  fan(208, 160, 1)
+  // the chandelier between the front fans, under a little bridge of flowers
+  blooms([
+    [152, top - 1, 3.6],
+    [160, top - 4, 4.2],
+    [168, top - 1, 3.6],
+  ])
+  lines.push(`M160 ${f(top + 2)}V78M150 84Q160 92 170 84Q160 80 150 84Z`)
+  lines.push('M152 87.5V92M156 89V95M160 90V97M164 89V95M168 87.5V92')
   return `<svg class="venue-art" viewBox="0 0 320 172" aria-hidden="true"><g class="v-fill">${fills.join('')}</g><g class="v-lines">${lines
     .map((d) => `<path pathLength="1" d="${d}"/>`)
     .join('')}</g></svg>`

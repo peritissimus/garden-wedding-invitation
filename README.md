@@ -55,9 +55,9 @@ src/
   art/                   # hand-built SVG artwork (no image files)
     rose.ts              # the rosebud that blooms (five rings of petals)
     scene.ts             # the garden in depth layers: sky, hills, glasshouse, trees,
-                         # hedges, lawn, chairs, the rose arch, blurred foreground,
+                         # hedges, lawn, chairs, the mandap, blurred foreground,
                          # lights; plus the warm/moonlit colour matrices
-    ornaments.ts         # wreath, flourish, glasshouse, icons, swatches, petals
+    ornaments.ts         # wreath, flourish, mandap drawing, icons, swatches, petals
     defs.ts              # shared gradients + watercolour filters
   animations/
     ease.ts              # Emil Kowalski's custom curves (CustomEase)

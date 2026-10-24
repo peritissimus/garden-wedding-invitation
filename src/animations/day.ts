@@ -58,18 +58,18 @@ const AFTERNOON: Moment = {
 }
 /** The hero looks up at the sky; scrolling tilts the camera down onto the garden. */
 const HERO: Moment = { ...AFTERNOON, cam: 0.94, camY: 280 }
-/** Top of the rose arch's garland, in scene units. */
-const ARCH_TOP = 395
+/** Top of the mandap's flowers and ferns, in scene units. */
+const MANDAP_TOP = 492
 
 /**
- * The hero, with the camera tilted up far enough that the arch stays clear
+ * The hero, with the camera tilted up far enough that the mandap stays clear
  * of the names and date — on short, wide screens (a laptop) the text takes
  * up more of the height, so the garden has to sit lower.
  */
 function heroFor(L: Layout, textBottom: number): Moment {
   const origin = L.h - 240 * L.u
-  const arch = origin + (L.oy + ARCH_TOP * L.u - origin) * HERO.cam
-  const lift = Math.max(HERO.camY * L.u, textBottom + 28 - arch)
+  const mandap = origin + (L.oy + MANDAP_TOP * L.u - origin) * HERO.cam
+  const lift = Math.max(HERO.camY * L.u, textBottom + 28 - mandap)
   return { ...HERO, camY: lift / L.u }
 }
 const GOLDEN: Moment = {
@@ -238,8 +238,8 @@ export function setupDay(el: HTMLElement, reduced: boolean) {
     root.classList.toggle('is-dusk', t.paint.night > 0.4)
     root.classList.toggle('is-night', t.paint.night > 0.75)
   }
-  /** How far down the hero's text reaches (it sits at the top of the page). */
-  const heroText = () => (document.querySelector('.hero .date-block')?.getBoundingClientRect().bottom ?? 0) + scrollY
+  /** How far down the hero's text reaches, scroll prompt included (it sits at the top of the page). */
+  const heroText = () => ((document.querySelector('.hero .scroll-cue') ?? document.querySelector('.hero .date-block'))?.getBoundingClientRect().bottom ?? 0) + scrollY
   const setHero = (L: Layout) => {
     for (const [target, vars] of frame(t, heroFor(L, heroText()), L)) gsap.set(target, vars)
     paint()
