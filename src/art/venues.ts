@@ -57,8 +57,8 @@ function cusps(cx: number, hw: number, top: number, spring: number, n: number) {
   return d
 }
 
-export function palace(): Art {
-  const r = rng(91)
+/** The gold facade on its own: walls, bays, chhatris, the portal and great dome, cornices and lights — no ground. */
+function palaceFacade(r: Rand) {
   const ROOF = 468
   const BASE = 800
   // bays either side of the portal: centre x and half-width
@@ -125,6 +125,36 @@ ${Array.from({ length: 9 }, (_, i) => `<path d="M${AX - 28 + i * 7} ${P.top + 86
     halos += circle(x, BASE - 4, 8)
   }
 
+  const defs = `<linearGradient id="wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b67b24"/><stop offset=".45" stop-color="#d9a246"/><stop offset="1" stop-color="#f0c165"/></linearGradient>
+<linearGradient id="pilaster" x1="0" x2="1"><stop offset="0" stop-color="#8a5818"/><stop offset=".5" stop-color="#f4cf7c"/><stop offset="1" stop-color="#9c6620"/></linearGradient>
+<radialGradient id="nicheGlow" cx=".5" cy=".55" r=".65"><stop offset="0" stop-color="#fffbe6"/><stop offset=".45" stop-color="#ffdf8e"/><stop offset="1" stop-color="#d48a24"/></radialGradient>
+<radialGradient id="portalGlow" cx=".5" cy=".5" r=".7"><stop offset="0" stop-color="#fffdf4"/><stop offset=".4" stop-color="#ffe9b0"/><stop offset="1" stop-color="#e3a03a"/></radialGradient>
+<radialGradient id="chhatriGlow" cx=".5" cy=".5" r=".6"><stop offset="0" stop-color="#fff6d6"/><stop offset="1" stop-color="#e2a446"/></radialGradient>
+<radialGradient id="domeBig" cx=".4" cy=".35" r=".8"><stop offset="0" stop-color="#ffe9d4"/><stop offset=".45" stop-color="#f3b896"/><stop offset=".85" stop-color="#c9784a"/><stop offset="1" stop-color="#9c5530"/></radialGradient>
+<radialGradient id="domeSmall" cx=".4" cy=".35" r=".8"><stop offset="0" stop-color="#fff0cc"/><stop offset=".5" stop-color="#eebd6a"/><stop offset="1" stop-color="#a36a22"/></radialGradient>
+<radialGradient id="halo"><stop offset="0" stop-color="#fff2c0" stop-opacity=".8"/><stop offset="1" stop-color="#ffcf70" stop-opacity="0"/></radialGradient>
+<radialGradient id="bloomGold" cx=".5" cy=".62" r=".6"><stop offset="0" stop-color="#ffd27a" stop-opacity=".35"/><stop offset="1" stop-color="#ffd27a" stop-opacity="0"/></radialGradient>
+<linearGradient id="floorG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a2008"/><stop offset="1" stop-color="#140a04"/></linearGradient>
+<pattern id="jaali" width="10" height="10" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="#7a4c14"/><path d="M5 0L10 5L5 10L0 5Z" fill="#ffd98a"/><circle cx="5" cy="5" r="1.4" fill="#7a4c14"/></pattern>
+<pattern id="jaaliFine" width="12" height="12" patternUnits="userSpaceOnUse"><path d="M6 1L11 6L6 11L1 6Z" fill="none" stroke="#ffe7aa" stroke-width=".8"/></pattern>
+<pattern id="balusters" width="8" height="12" patternUnits="userSpaceOnUse"><rect width="8" height="12" fill="#8a5818"/><path d="M2 0h4c0 3-1.6 4-1.6 6s1.6 3 1.6 6h-4c0-3 1.6-4 1.6-6s-1.6-3-1.6-6Z" fill="#f4cf7c"/></pattern>`
+  // the facade's own width: it ends at its outermost pilasters
+  const X0 = AX - 880
+  const X1 = AX + 880
+  const facade = `<clipPath id="facadeClip"><rect x="${X0}" y="0" width="${X1 - X0}" height="${BASE + 10}"/></clipPath><g clip-path="url(#facadeClip)">${walls}${pilasters}
+<path d="${arcade}" fill="none" stroke="#ffe6a8" stroke-opacity=".7" stroke-width="1.4"/>
+<rect x="-40" y="${ROOF - 4}" width="1680" height="6" fill="#a8701e"/><rect x="-40" y="${ROOF - 4}" width="1680" height="2" fill="#ffe2a0"/>
+${jaali}${niches}${lamps}${trims}${tops}
+<rect x="-40" y="${BASE - 8}" width="1680" height="10" fill="#a8701e"/><rect x="-40" y="${BASE - 8}" width="1680" height="2" fill="#ffe2a0"/>
+<path d="${halos}" fill="url(#halo)"/><path d="${bulbs}" fill="#fff8dc"/></g>
+${portal}${bigDome}${corners}`
+  return { defs, facade, BASE, ROOF }
+}
+
+/** The Sangeet at SNJ Gold as a whole venue: the facade over a dark floor, trees behind, a red-carpet stair between roses. */
+export function palace(): Art {
+  const r = rng(91)
+  const { defs, facade, BASE, ROOF } = palaceFacade(r)
   // the stair: red carpet between gold edges, widening towards us
   let stair = ''
   for (let i = 0; i < 9; i++) {
@@ -156,28 +186,10 @@ ${Array.from({ length: 9 }, (_, i) => `<path d="M${AX - 28 + i * 7} ${P.top + 86
   }
 
   return {
-    defs: `<linearGradient id="wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b67b24"/><stop offset=".45" stop-color="#d9a246"/><stop offset="1" stop-color="#f0c165"/></linearGradient>
-<linearGradient id="pilaster" x1="0" x2="1"><stop offset="0" stop-color="#8a5818"/><stop offset=".5" stop-color="#f4cf7c"/><stop offset="1" stop-color="#9c6620"/></linearGradient>
-<radialGradient id="nicheGlow" cx=".5" cy=".55" r=".65"><stop offset="0" stop-color="#fffbe6"/><stop offset=".45" stop-color="#ffdf8e"/><stop offset="1" stop-color="#d48a24"/></radialGradient>
-<radialGradient id="portalGlow" cx=".5" cy=".5" r=".7"><stop offset="0" stop-color="#fffdf4"/><stop offset=".4" stop-color="#ffe9b0"/><stop offset="1" stop-color="#e3a03a"/></radialGradient>
-<radialGradient id="chhatriGlow" cx=".5" cy=".5" r=".6"><stop offset="0" stop-color="#fff6d6"/><stop offset="1" stop-color="#e2a446"/></radialGradient>
-<radialGradient id="domeBig" cx=".4" cy=".35" r=".8"><stop offset="0" stop-color="#ffe9d4"/><stop offset=".45" stop-color="#f3b896"/><stop offset=".85" stop-color="#c9784a"/><stop offset="1" stop-color="#9c5530"/></radialGradient>
-<radialGradient id="domeSmall" cx=".4" cy=".35" r=".8"><stop offset="0" stop-color="#fff0cc"/><stop offset=".5" stop-color="#eebd6a"/><stop offset="1" stop-color="#a36a22"/></radialGradient>
-<radialGradient id="halo"><stop offset="0" stop-color="#fff2c0" stop-opacity=".8"/><stop offset="1" stop-color="#ffcf70" stop-opacity="0"/></radialGradient>
-<radialGradient id="bloomGold" cx=".5" cy=".62" r=".6"><stop offset="0" stop-color="#ffd27a" stop-opacity=".35"/><stop offset="1" stop-color="#ffd27a" stop-opacity="0"/></radialGradient>
-<linearGradient id="floorG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a2008"/><stop offset="1" stop-color="#140a04"/></linearGradient>
-<pattern id="jaali" width="10" height="10" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="#7a4c14"/><path d="M5 0L10 5L5 10L0 5Z" fill="#ffd98a"/><circle cx="5" cy="5" r="1.4" fill="#7a4c14"/></pattern>
-<pattern id="jaaliFine" width="12" height="12" patternUnits="userSpaceOnUse"><path d="M6 1L11 6L6 11L1 6Z" fill="none" stroke="#ffe7aa" stroke-width=".8"/></pattern>
-<pattern id="balusters" width="8" height="12" patternUnits="userSpaceOnUse"><rect width="8" height="12" fill="#8a5818"/><path d="M2 0h4c0 3-1.6 4-1.6 6s1.6 3 1.6 6h-4c0-3 1.6-4 1.6-6s-1.6-3-1.6-6Z" fill="#f4cf7c"/></pattern>`,
+    defs,
     body: `<path d="${trees}" fill="#0d1810"/>
 <rect x="-40" y="${BASE}" width="1680" height="250" fill="url(#floorG)"/>
-${walls}${pilasters}
-<path d="${arcade}" fill="none" stroke="#ffe6a8" stroke-opacity=".7" stroke-width="1.4"/>
-<rect x="-40" y="${ROOF - 4}" width="1680" height="6" fill="#a8701e"/><rect x="-40" y="${ROOF - 4}" width="1680" height="2" fill="#ffe2a0"/>
-${jaali}${niches}${lamps}${trims}${tops}
-${portal}${bigDome}${corners}
-<rect x="-40" y="${BASE - 8}" width="1680" height="10" fill="#a8701e"/><rect x="-40" y="${BASE - 8}" width="1680" height="2" fill="#ffe2a0"/>
-<path d="${halos}" fill="url(#halo)"/><path d="${bulbs}" fill="#fff8dc"/>
+${facade}
 <ellipse cx="${AX}" cy="${BASE - 160}" rx="900" ry="330" fill="url(#bloomGold)"/>
 ${stair}${carpet}
 <path d="${leaves[0]}" fill="#1f2a14"/><path d="${leaves[1]}" fill="#2c3a1c"/>
@@ -353,5 +365,191 @@ ${stalls}${urlis}
 ${bunting}${parasols}
 <ellipse cx="${AX}" cy="420" rx="760" ry="320" fill="url(#bzLight)"/>`,
     box: [-40, 70, 1640, 1045],
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Decor in the garden: the same lawn, dressed for each celebration    */
+/* ------------------------------------------------------------------ */
+
+const FOOT = 772 // where the stage stands, at the end of the lawn
+/** Half-width of the aisle, widening towards us (as the wedding's runner). */
+const aisleAt = (y: number) => 18 + ((y - FOOT) / 240) * 240
+
+/**
+ * The Sangeet: a gold palace stage standing at the end of the lawn, lit from
+ * within, its glow spilling on the grass; a red carpet between deep-red roses
+ * and gold lanterns leads up to it. Painted in its own (night) light.
+ */
+export function palaceDecor(): Art {
+  const r = rng(93)
+  const { defs, facade } = palaceFacade(rng(91))
+  let carpet = `<path d="M${AX - 24} ${FOOT}H${AX + 24}L${AX + 258} 1012H${AX - 258}Z" fill="#9b1d2c"/><path d="M${AX - 20} ${FOOT}L${AX - 240} 1012M${AX + 20} ${FOOT}L${AX + 240} 1012" stroke="#e6b45a" stroke-width="2"/>`
+  for (let y = FOOT + 20; y < 1012; y += 24) carpet += `<path d="M${f(AX - aisleAt(y) * 0.9)} ${y}H${f(AX + aisleAt(y) * 0.9)}" stroke="#b8323f" stroke-width="1" opacity=".5"/>`
+  // roses massed along both edges of the carpet, bigger nearer us
+  const roses = ['', '', '']
+  const leaves = ['', '']
+  for (let i = 0; i < 700; i++) {
+    const t = r()
+    const y = FOOT + 6 + t * t * 240
+    const s = 0.4 + ((y - FOOT) / 240) * 1.3
+    const m = r() < 0.5 ? -1 : 1
+    const x = AX + m * (aisleAt(y) + 6 * s + Math.abs(gauss(r)) * 26 * s)
+    if (r() < 0.35) leaves[i % 2] += circle(x + gauss(r) * 4 * s, y + 3 * s, 5 * s)
+    roses[Math.floor(r() * 3)] += circle(x, y, (3.4 + r() * 2.6) * s)
+  }
+  // gold lanterns on tall stands down both sides, lit
+  let stands = ''
+  let flames = ''
+  for (const y of [800, 836, 884, 950]) {
+    const s = 0.5 + ((y - FOOT) / 240) * 1.2
+    for (const m of [-1, 1]) {
+      const x = AX + m * (aisleAt(y) + 46 * s)
+      stands += `<path d="M${f(x)} ${y}V${f(y - 60 * s)}" stroke="#b8862e" stroke-width="${f(2.4 * s)}"/><path d="M${f(x - 7 * s)} ${f(y - 60 * s)}h${f(14 * s)}l${f(-2 * s)} ${f(-16 * s)}h${f(-10 * s)}Z" fill="#d9a646"/><path d="M${f(x - 5 * s)} ${f(y - 76 * s)}L${f(x)} ${f(y - 84 * s)}L${f(x + 5 * s)} ${f(y - 76 * s)}Z" fill="#b8862e"/>`
+      flames += `<circle cx="${f(x)}" cy="${f(y - 68 * s)}" r="${f(26 * s)}" fill="url(#halo)"/><ellipse cx="${f(x)}" cy="${f(y - 68 * s)}" rx="${f(2.4 * s)}" ry="${f(5 * s)}" fill="#fff4cc"/>`
+    }
+  }
+  return {
+    defs: `${defs}<radialGradient id="spill" cx=".5" cy=".3" r=".6"><stop offset="0" stop-color="#ffcf6a" stop-opacity=".55"/><stop offset="1" stop-color="#ffcf6a" stop-opacity="0"/></radialGradient>`,
+    body: `<ellipse cx="${AX}" cy="${FOOT + 40}" rx="620" ry="120" fill="url(#spill)"/>
+<ellipse cx="${AX}" cy="${FOOT - 150}" rx="560" ry="240" fill="url(#bloomGold)"/>
+<g transform="translate(${AX} ${FOOT}) scale(.5) translate(${-AX} -800)">${facade}</g>
+${carpet}
+<path d="${leaves[0]}" fill="#22301a"/><path d="${leaves[1]}" fill="#30401f"/>
+<path d="${roses[0]}" fill="#5c0c18"/><path d="${roses[1]}" fill="#86182a"/><path d="${roses[2]}" fill="#b0303f"/>
+${stands}${flames}`,
+    box: [-40, 420, 1640, 1045],
+  }
+}
+
+/**
+ * The Haldi: the lawn as a soft, traditional Meena Bazaar — bamboo poles strung
+ * with marigold strands and pastel parasols, striped stalls down either side,
+ * floor cushions for guests, and a yellow-and-white draped haldi stage with a
+ * swing under a marigold arch where the mandap would stand. Soft morning light.
+ */
+export function bazaarDecor(): Art {
+  const r = rng(79)
+  const pastels = ['#f6c9cf', '#fbe3a1', '#cfe8d6', '#f9d3bd', '#e3d4f2', '#ffd27a']
+
+  // the stage
+  const S = { x0: AX - 150, x1: AX + 150, top: 598, base: FOOT }
+  let panels = ''
+  for (let i = 0; i < 8; i++) {
+    const w = (S.x1 - S.x0) / 8
+    panels += `<rect x="${f(S.x0 + i * w)}" y="${S.top}" width="${f(w)}" height="${S.base - S.top}" fill="${i % 2 ? '#fff2c6' : '#ffe08a'}"/>`
+  }
+  let swags = ''
+  for (const [i, c] of ['#fff4d0', '#ffd769', '#fff8e8'].entries()) {
+    const y = S.top + 22 + i * 16
+    swags += `<path d="M${S.x0} ${y}Q${AX - 75} ${y + 50} ${AX} ${y}Q${AX + 75} ${y + 50} ${S.x1} ${y}V${y - 12}H${S.x0}Z" fill="${c}"/>`
+  }
+  let arch = ''
+  for (let i = 0; i <= 54; i++) {
+    const a = Math.PI * (i / 54)
+    arch += circle(AX - Math.cos(a) * 165, S.top + 28 - Math.sin(a) * 104 + (i % 2) * 2.4, 7.5 + (i % 3))
+  }
+  let legFlowers = ''
+  for (const m of [-1, 1]) for (let y = S.top + 28; y < S.base; y += 10) legFlowers += circle(AX + m * 165 + gauss(r) * 1.6, y, 7.5)
+  const swing = `<path d="M${AX - 56} ${S.top + 50}V${S.base - 74}M${AX + 56} ${S.top + 50}V${S.base - 74}" stroke="#d08a1e" stroke-width="2.4" stroke-dasharray="5 2.5"/>
+<rect x="${AX - 70}" y="${S.base - 78}" width="140" height="13" rx="3" fill="#a8743a"/><rect x="${AX - 64}" y="${S.base - 96}" width="128" height="20" rx="8" fill="#fff0d0"/>
+<rect x="${AX - 68}" y="${S.base - 102}" width="28" height="28" rx="11" fill="#f6c9cf"/><rect x="${AX + 40}" y="${S.base - 102}" width="28" height="28" rx="11" fill="#f6c9cf"/>`
+  const platform = `<rect x="${S.x0 - 26}" y="${S.base}" width="${S.x1 - S.x0 + 52}" height="20" fill="#c8945a"/><rect x="${S.x0 - 26}" y="${S.base}" width="${S.x1 - S.x0 + 52}" height="3" fill="#f0c890"/>`
+
+  // bamboo poles strung with marigold strands and parasols
+  const poles = [-1, 1].flatMap((m) => [AX + m * 290, AX + m * 600, AX + m * 900])
+  let poleArt = ''
+  for (const x of poles) {
+    const near = Math.abs(x - AX) > 500
+    const y0 = near ? 800 : 784
+    poleArt += `<path d="M${x} ${y0}V420" stroke="#c49a5c" stroke-width="${near ? 7 : 5}"/><path d="${Array.from({ length: 12 }, (_, i) => `M${x - 4} ${440 + i * 30}h8`).join('')}" stroke="#9a7440" stroke-width="1.4"/><circle cx="${x}" cy="418" r="${near ? 9 : 7}" fill="#ff9b2f"/>`
+  }
+  let strings = ''
+  const beads = ['', '', '']
+  let parasols = ''
+  const sorted = [...poles].sort((a, b) => a - b)
+  for (let i = 0; i < sorted.length - 1; i++) {
+    const [xa, xb] = [sorted[i], sorted[i + 1]]
+    for (const [yTop, sag] of [
+      [428, 46],
+      [470, 34],
+    ] as const) {
+      strings += `M${xa} ${yTop}Q${(xa + xb) / 2} ${yTop + sag * 2} ${xb} ${yTop}`
+      for (let x = xa + 12; x < xb - 6; x += 13 + r() * 5) {
+        const t = (x - xa) / (xb - xa)
+        const top = yTop + 4 * t * (1 - t) * sag
+        const len = 30 + Math.sin(t * Math.PI) * 50 + r() * 26
+        for (let y = top + 6; y < top + len; y += 7.5) beads[Math.floor(r() * 3)] += circle(x + gauss(r) * 0.6, y, 3.6)
+      }
+    }
+    for (let k = 0; k < 2; k++) {
+      const x = xa + (xb - xa) * (0.3 + k * 0.4)
+      const t = (x - xa) / (xb - xa)
+      const y = 428 + 4 * t * (1 - t) * 46 + 70 + r() * 24
+      parasols += `<path d="M${f(x)} ${f(428 + 4 * t * (1 - t) * 46)}V${f(y - 20)}" stroke="#c9b08a" stroke-width=".8"/>` + parasol(x, y, 20 + r() * 8, pastels[Math.floor(r() * pastels.length)], '#ffffff', gauss(r) * 6)
+    }
+  }
+
+  // stalls down either side, and rows of floor cushions by the aisle
+  const stripeSets: [string, string][] = [
+    ['#fff6ec', '#f6b6c0'],
+    ['#fff6ec', '#f7cf63'],
+    ['#fff6ec', '#a8d6b8'],
+    ['#fff6ec', '#f4b28a'],
+  ]
+  let stalls = ''
+  const rows = [802, 836, 884, 950]
+  rows.forEach((y, i) => {
+    const s = 0.42 + ((y - FOOT) / 240) * 1.25
+    for (const m of [-1, 1]) {
+      const w = 120 * s
+      const x = m < 0 ? AX - aisleAt(y) - 150 * s - w : AX + aisleAt(y) + 150 * s
+      const goods = Array.from({ length: 6 }, (_, k) => `<circle cx="${f(x + w * 0.14 + k * w * 0.14)}" cy="${f(y - 40 * s)}" r="${f(5 * s)}" fill="${['#ffb534', '#f6c9cf', '#fff1a8', '#ff8f1f', '#e3d4f2', '#cfe8d6'][k]}"/>`).join('')
+      stalls = stall(x, y, w, 150 * s, stripeSets[(i + (m > 0 ? 2 : 0)) % 4], goods) + stalls
+    }
+  })
+  let cushions = ''
+  rows.forEach((y) => {
+    const s = 0.42 + ((y - FOOT) / 240) * 1.25
+    for (const m of [-1, 1])
+      for (let k = 0; k < 2; k++) {
+        const x = AX + m * (aisleAt(y) + 14 * s + k * 46 * s)
+        const c = pastels[(k + Math.round(y)) % pastels.length]
+        cushions += `<rect x="${f(x - 20 * s)}" y="${f(y - 9 * s)}" width="${f(40 * s)}" height="${f(11 * s)}" rx="${f(4 * s)}" fill="${c}"/><rect x="${f(x - 18 * s)}" y="${f(y - 20 * s)}" width="${f(36 * s)}" height="${f(11 * s)}" rx="${f(5.5 * s)}" fill="#fff6ec"/><path d="M${f(x - 20 * s)} ${f(y - 4 * s)}h${f(40 * s)}" stroke="#ffffff" stroke-opacity=".6" stroke-width="${f(1.2 * s)}"/>`
+      }
+  })
+
+  // a cream dhurrie up the aisle, edged in marigolds, a rangoli before the stage, petals
+  let edge = ''
+  for (let y = FOOT + 8; y < 1012; y += 5 + (y - FOOT) * 0.03) for (const m of [-1, 1]) edge += circle(AX + m * aisleAt(y), y, 2.2 + (y - FOOT) * 0.016)
+  let rangoli = ''
+  for (const [k, n, c] of [
+    [1, 26, '#f6b6c0'],
+    [0.72, 20, '#ffd769'],
+    [0.46, 14, '#fff6ec'],
+    [0.24, 9, '#ff9b2f'],
+  ] as const)
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2
+      const x = AX + Math.cos(a) * 70 * k
+      const y = FOOT + 26 + Math.sin(a) * 10 * k
+      rangoli += `<ellipse cx="${f(x)}" cy="${f(y)}" rx="${f(6 * k + 2)}" ry="${f(1.6 * k + 1)}" transform="rotate(${f((a * 180) / Math.PI)} ${f(x)} ${f(y)})" fill="${c}"/>`
+    }
+
+  return {
+    defs: `<radialGradient id="bzLight2" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff6d8" stop-opacity=".5"/><stop offset="1" stop-color="#fff6d8" stop-opacity="0"/></radialGradient>`,
+    body: `<ellipse cx="${AX}" cy="${FOOT - 60}" rx="300" ry="180" fill="url(#bzLight2)"/>
+<path d="M${AX - 18} ${FOOT}H${AX + 18}L${AX + 258} 1012H${AX - 258}Z" fill="#fbf1de"/><path d="${edge}" fill="#ff9b2f"/>
+${rangoli}
+${panels}${swags}
+<path d="M${AX - 165} ${S.top + 28}V${S.base}M${AX + 165} ${S.top + 28}V${S.base}" stroke="#7da35e" stroke-width="7"/><path d="${legFlowers}" fill="#ffa21f"/>
+<path d="${arch}" fill="#ff9b2f"/><path d="${arch}" fill="#ffd23f" transform="translate(0 -2.5)" opacity=".75"/>
+${swing}${platform}
+${poleArt}
+<path d="${strings}" fill="none" stroke="#b08850" stroke-width="1.2"/>
+<path d="${beads[0]}" fill="#ff9b2f"/><path d="${beads[1]}" fill="#ffc93c"/><path d="${beads[2]}" fill="#fff0b8"/>
+${parasols}
+${stalls}${cushions}`,
+    box: [-40, 360, 1640, 1045],
   }
 }

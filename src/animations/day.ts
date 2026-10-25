@@ -182,7 +182,7 @@ function targets(stage: HTMLElement) {
     clouds: q('.clouds'),
     cloudLooks: qa('.cloud-band .slot'),
     birds: q('.birds'),
-    garden: q('.garden'),
+    garden: q('.decor-mandap'),
     setBazaar: q('.set.bazaar'),
     setPalace: q('.set.palace'),
     butterflies: q('.butterflies'),
@@ -198,6 +198,7 @@ function targets(stage: HTMLElement) {
       [q('.cam-back'), 0.92, 0.6],
       [q('.cam-front'), 1, 1],
       [q('.cam-fg'), 1.2, 1.3],
+      [q('.cam-mandap'), 1, 1],
       [q('.cam-set'), 1, 1],
     ] as [HTMLElement, number, number][],
   }

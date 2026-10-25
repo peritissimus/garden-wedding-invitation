@@ -715,6 +715,10 @@ const SIDE_STRANDS = [strand(-60, 456, 300, 640, 613, 590, 16, 0, 0.45), strand(
 /** Lantern positions (filled while drawing the front layer) so their flames can glow. */
 const LANTERNS: { x: number; y: number; s: number; i: number }[] = []
 
+/** The wedding's decor (runner, chairs, light strands, mandap), split off from the lawn by front(). */
+let decor: Art | null = null
+
+/** The lawn the decor stands on: the same for every celebration. */
 export function front(): Art {
   const r = rng(21)
   // lawn with mown stripes converging on the mandap
@@ -767,8 +771,7 @@ export function front(): Art {
   FAIRY.length = 0
   const mandapArt = mandap(r)
   const ru = rng(37)
-  return {
-    defs: `${roseDefs()}${HEDGE_TEX}
+  const defs = `${roseDefs()}${HEDGE_TEX}
 <linearGradient id="lawnG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a6c288"/><stop offset=".5" stop-color="#8fb072"/><stop offset="1" stop-color="#729760"/></linearGradient>
 <clipPath id="lawnClip"><path d="M-40 770C400 760 1200 760 1640 770V1010H-40Z"/></clipPath>
 <linearGradient id="runnerG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ece4d6"/><stop offset="1" stop-color="#f5efe5"/></linearGradient>
@@ -777,7 +780,21 @@ export function front(): Art {
 <linearGradient id="stoneG" x1="0" x2="1"><stop offset="0" stop-color="#e2dccf"/><stop offset=".6" stop-color="#f3efe6"/><stop offset="1" stop-color="#d1c9b9"/></linearGradient>
 <radialGradient id="ballG" cx=".62" cy=".3" r=".8"><stop offset="0" stop-color="#a9c792"/><stop offset=".55" stop-color="#6f9161"/><stop offset="1" stop-color="#486743"/></radialGradient>
 <linearGradient id="fanG" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#d7dae4"/><stop offset=".3" stop-color="#f4f4f6"/><stop offset=".55" stop-color="#ffffff"/><stop offset=".85" stop-color="#e9eaf0"/><stop offset="1" stop-color="#cfd3de"/></linearGradient>
-<linearGradient id="crystalG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#dbe5f0"/></linearGradient>`,
+<linearGradient id="crystalG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#dbe5f0"/></linearGradient>`
+  decor = {
+    defs,
+    body: `<path d="M786 ${FOOT + 2}L814 ${FOOT + 2}L${AX + 262} 1010L${AX - 262} 1010Z" fill="url(#runnerG)"/>
+<path d="M786 ${FOOT + 2}L${AX - 262} 1010M814 ${FOOT + 2}L${AX + 262} 1010" stroke="#e2dacd" stroke-width="1.2"/>
+${rangoli(AX, FOOT + 8, 64, 0.11)}
+<g class="petal-strew">${petals}</g>
+${chairs}
+${strands}
+${mandapArt}`,
+    // from the grasses on the mandap down to the nearest row of chairs
+    box: [-40, 380, 1640, 1045],
+  }
+  return {
+    defs,
     body: `<path d="M-40 770C400 760 1200 760 1640 770V1010H-40Z" fill="url(#lawnG)"/>
 <path d="${stripes}" fill="#ffffff" opacity=".07" clip-path="url(#lawnClip)"/>
 ${meadow(rng(23))}
@@ -791,17 +808,16 @@ ${(
   ] as const
 )
   .map(([x, y, k]) => urn(x, y, k) + urnFlowers(ru, x, y, k))
-  .join('')}
-<path d="M786 ${FOOT + 2}L814 ${FOOT + 2}L${AX + 262} 1010L${AX - 262} 1010Z" fill="url(#runnerG)"/>
-<path d="M786 ${FOOT + 2}L${AX - 262} 1010M814 ${FOOT + 2}L${AX + 262} 1010" stroke="#e2dacd" stroke-width="1.2"/>
-${rangoli(AX, FOOT + 8, 64, 0.11)}
-<g class="petal-strew">${petals}</g>
-${chairs}
-${strands}
-${mandapArt}`,
-    // from the grasses on the mandap down to the nearest row of chairs
-    box: [-40, 380, 1640, 1045],
+  .join('')}`,
+    // the urns' topiary down to the front of the lawn
+    box: [-40, 690, 1640, 1045],
   }
+}
+
+/** The wedding's decor on the lawn: the runner, chairs and lanterns, light strands and the mandap. */
+export function mandapDecor(): Art {
+  if (!decor) front()
+  return decor!
 }
 
 /* ------------------------------------------------------------------ */

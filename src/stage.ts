@@ -1,5 +1,5 @@
 import * as scene from './art/scene'
-import { bazaar, palace } from './art/venues'
+import { bazaarDecor, palaceDecor } from './art/venues'
 import type { Art, GlowGroup } from './art/scene'
 
 /**
@@ -23,7 +23,7 @@ export interface Layout {
 
 /** A region in scene units: x0 y0 x1 y1. */
 type Box = Art['box']
-type Depth = 'back' | 'front' | 'fg'
+type Depth = 'back' | 'front' | 'mandap' | 'fg'
 type Paintable = Pick<Art, 'defs' | 'body'>
 interface Glow {
   el: HTMLCanvasElement
@@ -35,7 +35,7 @@ interface Glow {
 const DPR = Math.min(window.devicePixelRatio || 1, matchMedia('(pointer: coarse)').matches ? 1.5 : 2)
 /** Ceiling for any one canvas, in device pixels. */
 const MAX_PIXELS = 4e6
-const DEPTHS: Depth[] = ['front', 'back', 'fg']
+const DEPTHS: Depth[] = ['front', 'mandap', 'back', 'fg']
 
 function measure(el: HTMLElement): Layout {
   const w = el.clientWidth
@@ -191,7 +191,7 @@ export function mountStage(root: HTMLElement) {
   // The artwork is generated on first use, a piece per frame, so the rose
   // appears straight away instead of waiting for thousands of leaves.
   const art: Partial<Record<Depth, Art>> = {}
-  const artOf = (d: Depth) => (art[d] ??= scene[d]())
+  const artOf = (d: Depth) => (art[d] ??= d === 'mandap' ? scene.mandapDecor() : scene[d]())
   let extras: { lights: ReturnType<typeof lightsOf>; fx: ReturnType<typeof scene.fx>; stars: ReturnType<typeof scene.stars> } | null = null
   /** lights need the trees and the front of the garden drawn first (they record where the lights hang) */
   const lightsOf = () => ({ back: scene.glowBack(), front: scene.glowFront(), fairies: scene.fairyLights(), trees: scene.treeLights() })
@@ -364,9 +364,9 @@ export function mountStage(root: HTMLElement) {
           glow('.cam-back .glow:not(.fairy)', [-40, 400, 1640, 700], sets.back),
           glow('.cam-back .fairy.f0', scene.TREE_LIGHT_BOX, [sets.trees[0]]),
           glow('.cam-back .fairy.f1', scene.TREE_LIGHT_BOX, [sets.trees[1]]),
-          glow('.cam-front .glow:not(.fairy)', [-40, 380, 1640, 1060], sets.front),
-          glow('.cam-front .fairy.f0', scene.FAIRY_BOX, [sets.fairies[0]]),
-          glow('.cam-front .fairy.f1', scene.FAIRY_BOX, [sets.fairies[1]]),
+          glow('.cam-mandap .glow:not(.fairy)', [-40, 380, 1640, 1060], sets.front),
+          glow('.cam-mandap .fairy.f0', scene.FAIRY_BOX, [sets.fairies[0]]),
+          glow('.cam-mandap .fairy.f1', scene.FAIRY_BOX, [sets.fairies[1]]),
         ].filter((g): g is Glow => !!g)
         glows.forEach(drawGlow)
       },
@@ -376,8 +376,8 @@ export function mountStage(root: HTMLElement) {
       // the venue scenes that take over for the haldi and the sangeet
       ...(
         [
-          ['bazaar', bazaar],
-          ['palace', palace],
+          ['bazaar', bazaarDecor],
+          ['palace', palaceDecor],
         ] as const
       ).map(([name, make]) => async () => {
         const a = make()
