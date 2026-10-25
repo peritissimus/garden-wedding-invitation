@@ -107,6 +107,9 @@ html.is-dusk .twinkle { animation-play-state: running; }
 /* the sunset and moonlit versions of each painted layer cross-fade over daylight (animations/day.ts) */
 .light-layer { position: absolute; inset: 0; opacity: 0; will-change: opacity; }
 .look.warm, .look.moon { opacity: 0; will-change: opacity; }
+/* the garden as a whole, and the venue scenes that take over from it for the haldi and sangeet */
+.garden { position: absolute; inset: 0; will-change: opacity; }
+.set { opacity: 0; will-change: opacity; }
 
 /* butterflies flit about the flowers by day; each wing beats on the GPU */
 .butterflies { position: absolute; inset: 0; pointer-events: none; will-change: opacity; }

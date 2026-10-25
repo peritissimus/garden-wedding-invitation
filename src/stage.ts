@@ -1,4 +1,5 @@
 import * as scene from './art/scene'
+import { bazaar, palace } from './art/venues'
 import type { Art, GlowGroup } from './art/scene'
 
 /**
@@ -372,6 +373,17 @@ export function mountStage(root: HTMLElement) {
       centred('.moon .slot', scene.moon(), 1.5),
       ...[0, 1, 2].map((i) => () => sheet(`.stars .st-${i}`, more().stars[i], Math.min(DPR, 1.5))()),
       () => sheet('.bokeh .slot', more().fx.bokeh, 1)(),
+      // the venue scenes that take over for the haldi and the sangeet
+      ...(
+        [
+          ['bazaar', bazaar],
+          ['palace', palace],
+        ] as const
+      ).map(([name, make]) => async () => {
+        const a = make()
+        const v = region(a.box, true)
+        if (v) await put($(`.set.${name}`), sceneCanvas(v, DPR), a, v)
+      }),
     ]
     await breathe()
     for (const job of jobs) {

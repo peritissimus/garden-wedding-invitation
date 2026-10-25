@@ -35,6 +35,13 @@ interface Moment {
   petals: number
   cam: number
   camY: number
+  /** which scene shows: the garden, the haldi's Meena Bazaar or the sangeet's gold palace */
+  sets: { garden: number; bazaar: number; palace: number }
+}
+const SETS = {
+  garden: { garden: 1, bazaar: 0, palace: 0 },
+  bazaar: { garden: 0, bazaar: 1, palace: 0 },
+  palace: { garden: 0, bazaar: 0, palace: 1 },
 }
 
 const AFTERNOON: Moment = {
@@ -55,6 +62,7 @@ const AFTERNOON: Moment = {
   petals: 1,
   cam: 1,
   camY: 60,
+  sets: SETS.garden,
 }
 /** The hero looks up at the sky; scrolling tilts the camera down onto the garden. */
 const HERO: Moment = { ...AFTERNOON, cam: 0.94, camY: 280 }
@@ -174,6 +182,9 @@ function targets(stage: HTMLElement) {
     clouds: q('.clouds'),
     cloudLooks: qa('.cloud-band .slot'),
     birds: q('.birds'),
+    garden: q('.garden'),
+    setBazaar: q('.set.bazaar'),
+    setPalace: q('.set.palace'),
     butterflies: q('.butterflies'),
     warm: qa('.look.warm'),
     moonlit: qa('.look.moon'),
@@ -187,6 +198,7 @@ function targets(stage: HTMLElement) {
       [q('.cam-back'), 0.92, 0.6],
       [q('.cam-front'), 1, 1],
       [q('.cam-fg'), 1.2, 1.3],
+      [q('.cam-set'), 1, 1],
     ] as [HTMLElement, number, number][],
   }
 }
@@ -203,6 +215,9 @@ function frame(t: Targets, m: Moment, L: Layout) {
     [t.moon, { x: X(m.moon.x), y: Y(m.moon.y), opacity: m.moon.o }],
     [t.clouds, { opacity: m.clouds.o }],
     [t.birds, { opacity: m.birds }],
+    [t.garden, { opacity: m.sets.garden }],
+    [t.setBazaar, { opacity: m.sets.bazaar }],
+    [t.setPalace, { opacity: m.sets.palace }],
     [t.butterflies, { opacity: m.birds }],
     [t.warm, { opacity: m.warm }],
     [t.moonlit, { opacity: m.moonMix }],
@@ -274,9 +289,10 @@ export function setupDay(el: HTMLElement, reduced: boolean, start: () => number)
     { at: byId('when'), m: AFTERNOON },
   ]
   events.forEach((el, i) => {
-    const m = lightAt(el.dataset.time ?? '12:00')
+    // each celebration in the light of its hour, and in its own setting
+    const m = { ...lightAt(el.dataset.time ?? '12:00'), sets: SETS[(el.dataset.scene ?? 'garden') as keyof typeof SETS] }
     const prev = events[i - 1]
-    if (prev && prev.dataset.date !== el.dataset.date && stops[stops.length - 1].m.night > 0.3) stops.push({ at: { a: prev, b: el, t: 0.5 }, m: DAWN })
+    if (prev && prev.dataset.date !== el.dataset.date && stops[stops.length - 1].m.night > 0.3) stops.push({ at: { a: prev, b: el, t: 0.5 }, m: { ...DAWN, sets: m.sets } })
     stops.push({ at: el, m })
   })
   // The invitation ends in the light of the last celebration: a daytime wedding ends in
@@ -299,7 +315,8 @@ export function setupDay(el: HTMLElement, reduced: boolean, start: () => number)
     if (!(from.at instanceof HTMLElement && to.at instanceof HTMLElement) || from.m.night > 0.3 || to.m.night < 0.7) continue
     const [a, b] = [from.at, to.at]
     const between = from.m === SUNSET ? [{ t: 0.5, m: DUSK }] : [{ t: 1 / 3, m: SUNSET }, { t: 2 / 3, m: DUSK }]
-    stops.splice(i, 0, ...between.map(({ t, m }) => ({ at: { a, b, t }, m })))
+    // the setting changes over the middle of the way: the earlier light keeps the old one, the later the new
+    stops.splice(i, 0, ...between.map(({ t, m }) => ({ at: { a, b, t }, m: { ...m, sets: t < 0.5 ? from.m.sets : to.m.sets } })))
   }
 
   const tl = gsap.timeline({ paused: true, defaults: { ease: 'none' }, onUpdate: paint })

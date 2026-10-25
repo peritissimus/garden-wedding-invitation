@@ -37,9 +37,12 @@ export function render(root: HTMLElement) {
   <div class="moon"><div class="slot"></div></div>
   <div class="clouds"><div class="cloud-band"><div class="slot day"></div><div class="slot golden"></div><div class="slot sunset"></div><div class="slot dusk"></div><div class="slot night"></div></div></div>
   <div class="birds">${birds()}</div>
+  <div class="garden">
   <div class="px" data-depth="6"><div class="cam cam-back">${looks}${lighting}</div></div>
   <div class="px" data-depth="14"><div class="cam cam-front">${looks}${lighting}<div class="butterflies">${butterflies()}</div></div></div>
   <div class="px" data-depth="30"><div class="cam cam-fg">${looks}</div></div>
+  </div>
+  <div class="px" data-depth="14"><div class="cam cam-set"><div class="slot set bazaar"></div><div class="slot set palace"></div></div></div>
   <div class="rays"><div class="slot"></div></div>
   <div class="bokeh"><div class="slot"></div></div>
   <div class="petals-day"><div class="petals">${petals(14, 5)}</div></div>
@@ -102,7 +105,7 @@ export function render(root: HTMLElement) {
 
 ${config.schedule
   .map(
-    (s) => `<section class="beat event" id="ev-${slug(s.title)}" data-date="${s.date}" data-time="${s.time}">
+    (s) => `<section class="beat event" id="ev-${slug(s.title)}" data-date="${s.date}" data-time="${s.time}" data-scene="${s.scene ?? 'garden'}">
   <div class="card event-card">
     ${icon(s)}
     <div class="ev-text">
