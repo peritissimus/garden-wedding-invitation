@@ -321,16 +321,11 @@ export function setupDay(el: HTMLElement, reduced: boolean) {
   }
   build()
   // The stage is sized to the large viewport, so a phone's toolbar sliding
-  // away doesn't resize it; only a real change (rotation, a resized window)
-  // repaints the scenery and re-places everything.
-  let timer = 0
-  addEventListener('resize', () => {
-    clearTimeout(timer)
-    timer = window.setTimeout(() => {
-      if (!stage.refit()) return
-      build()
-      ScrollTrigger.refresh()
-    }, 250)
+  // away doesn't resize it; when it is (re)measured — once its styles apply,
+  // or on rotation or a resized window — everything is re-placed.
+  stage.onLayout(() => {
+    build()
+    ScrollTrigger.refresh()
   })
   document.fonts?.ready.then(build)
 

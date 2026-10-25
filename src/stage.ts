@@ -384,11 +384,39 @@ export function mountStage(root: HTMLElement) {
     }
   }
 
-  paint()
+  /*
+   * Measure only once the stage's own styles apply. Safari can run this script
+   * before the stylesheet has loaded; the unstyled stage is then thousands of
+   * pixels tall, and everything painted for that size lands far off screen.
+   * After that, re-measure whenever the stage really changes size (rotation, a
+   * resized window) and tell the day so it can re-place everything.
+   */
+  const listeners: ((L: Layout) => void)[] = []
+  const styled = () => getComputedStyle(root).position === 'fixed'
+  const relayout = (force = false) => {
+    const next = measure(root)
+    if (!force && next.w === L.w && next.h === L.h) return false
+    L = next
+    paint()
+    listeners.forEach((f) => f(L))
+    return true
+  }
+  const start = () => (styled() ? relayout(true) : requestAnimationFrame(start))
+  if (styled()) paint()
+  else requestAnimationFrame(start)
+  let resizing = 0
+  new ResizeObserver(() => {
+    clearTimeout(resizing)
+    resizing = window.setTimeout(() => styled() && relayout(), 200)
+  }).observe(root)
 
   return {
     get layout() {
       return L
+    },
+    /** Called with the new layout whenever the stage is (re)measured. */
+    onLayout(f: (L: Layout) => void) {
+      listeners.push(f)
     },
     /** Called every frame the day moves: redraws the sky and the lights if they changed. */
     update(s: Sky) {
@@ -397,13 +425,7 @@ export function mountStage(root: HTMLElement) {
       drawLights()
     },
     /** Re-measure; if the stage changed size, repaint everything for the new size. */
-    refit() {
-      const next = measure(root)
-      if (next.w === L.w && next.h === L.h) return false
-      L = next
-      paint()
-      return true
-    },
+    refit: () => relayout(),
   }
 }
 

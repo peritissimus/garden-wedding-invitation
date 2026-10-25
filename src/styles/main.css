@@ -339,7 +339,7 @@ main { position: relative; z-index: 1; }
 .countdown { display: flex; justify-content: center; gap: clamp(20px, 6vw, 56px); margin: 34px 0 6px; }
 .countdown div { min-width: 70px; }
 .countdown strong { display: block; font: 300 clamp(44px, 8vw, 62px)/1 var(--serif); font-variant-numeric: lining-nums tabular-nums; color: var(--t-ink); }
-.countdown small { display: block; margin-top: 10px; font: 400 10px var(--sans); letter-spacing: 0.3em; text-transform: uppercase; color: var(--t-soft); }
+.countdown small { display: block; margin-top: 10px; font: 500 12px var(--sans); letter-spacing: 0.3em; text-transform: uppercase; color: var(--t-soft); }
 
 /* Order of the day: each moment is its own small card, alternating sides
    on wide screens so the arch stays in view */
