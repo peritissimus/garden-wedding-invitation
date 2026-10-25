@@ -58,7 +58,7 @@ export const config: WeddingConfig = {
     { name: 'Taj Khema', area: 'Agra', mapQuery: 'Taj Khema Agra' },
   ],
   schedule: [
-    { title: 'Haldi', venue: 'SNJ Gold Convention Center', date: '2026-11-23', time: '10:30', durationHours: 3, note: 'A morning of colour, sunshine and new beginnings.', attire: { label: 'Bright, colourful ethnics', colors: ['#f6c22e', '#f08a24', '#e8508a', '#3f9a62'] } },
+    { title: 'Haldi', venue: 'SNJ Gold Convention Center', date: '2026-11-23', time: '10:30', durationHours: 3, note: 'A morning of colour, sunshine and new beginnings.', attire: { label: 'Bright, colourful ethnics', colors: ['#f6c22e', '#f08a24', '#e8508a'] } },
     { title: 'Sangeet', venue: 'SNJ Gold Convention Center', date: '2026-11-23', time: '19:00', durationHours: 4, note: 'An evening of music, dancing and a little Bollywood magic.', attire: { label: 'Festive glamour', colors: ['#d4a537', '#b8296e', '#2f3f9e', '#c9ced6'] } },
     { title: 'Wedding', venue: 'Taj Khema', date: '2026-11-24', time: '12:00', durationHours: 4, note: 'The beginning of our forever, with you by our side.', attire: { label: 'Pretty pastels', colors: ['#f2c9d1', '#cbe6d6', '#dccff0', '#c9dcef', '#f7d5c0'] } },
   ],
