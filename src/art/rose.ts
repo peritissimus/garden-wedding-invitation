@@ -63,12 +63,40 @@ export function rose() {
     }
   })
 
-  let stamens = ''
-  for (let i = 0; i < 16; i++) {
-    const a = r() * Math.PI * 2
-    const d = 3 + r() * 9
-    stamens += `<circle cx="${f(C + Math.cos(a) * d)}" cy="${f(C + Math.sin(a) * d)}" r="${f(1.2 + r())}" fill="#c99a3e"/>`
+  /*
+   * The heart of the rose: a tight spiral of cupped petals, each wrapping part
+   * of the way round the centre, smaller and deeper as they go in, with shadow
+   * between them and light catching their rims. It turns and opens with the
+   * innermost ring, and stays crisp when the camera dives into it.
+   */
+  const P = (cx: number, cy: number, R: number, a: number) => `${f(cx + Math.cos(a) * R)} ${f(cy + Math.sin(a) * R)}`
+  let cups = ''
+  const n = 9
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1)
+    const R = 46 * (1 - t * 0.8)
+    const a0 = i * 2.4 + (r() - 0.5) * 0.3 // golden-angle turns, so the folds spiral
+    const span = 3.3 + r() * 0.8
+    const a1 = a0 + span
+    const mid = (a0 + a1) / 2
+    // the inner edge is an arc of a smaller circle pushed out along the petal's middle: thick in the middle, fine at the tips
+    const ox = Math.cos(mid) * R * 0.34
+    const oy = Math.sin(mid) * R * 0.34
+    const Ri = R * 0.74
+    const big = span > Math.PI ? 1 : 0
+    const d = `M${P(0, 0, R, a0)}A${f(R)} ${f(R)} 0 ${big} 1 ${P(0, 0, R, a1)}Q${P(0, 0, R * 0.93, a1 + 0.12)} ${P(ox, oy, Ri, a1 - 0.05)}A${f(Ri)} ${f(Ri)} 0 ${big} 0 ${P(ox, oy, Ri, a0 + 0.05)}Q${P(0, 0, R * 0.93, a0 - 0.12)} ${P(0, 0, R, a0)}Z`
+    const rim = `M${P(0, 0, R, a0 + 0.15)}A${f(R)} ${f(R)} 0 ${big} 1 ${P(0, 0, R, a1 - 0.15)}`
+    // each petal casts a soft shadow onto the one inside it
+    cups += `<path d="${d}" fill="#8f4650" opacity=".28" transform="translate(${f(-ox * 0.4 + Math.cos(mid) * 2.2)} ${f(-oy * 0.4 + Math.sin(mid) * 2.2)})"/><path d="${d}" fill="url(#rcup)" transform="translate(${f(-ox * 0.4)} ${f(-oy * 0.4)})"/><path d="${rim}" fill="none" stroke="#fff4f1" stroke-opacity="${(0.55 + t * 0.3).toFixed(2)}" stroke-width="${f(1.6 - t * 0.9)}" stroke-linecap="round"/>`
   }
+  // the last tight curl at the very centre
+  const curl = `M3 0A3 3 0 1 1 0 -3A5.5 5.5 0 0 1 5.5 1.5A8 8 0 0 1 -4 7`
+  const core = at(
+    0,
+    `<circle r="50" fill="url(#rwell)"/>${cups}<path d="${curl}" fill="none" stroke="#a9565f" stroke-width="1.6" stroke-linecap="round"/><circle r="2.2" fill="#8f4650"/>`,
+    'rp rose-core',
+    ` data-ring="${RINGS.length - 1}"`,
+  )
 
   return `<svg class="rose" viewBox="0 0 600 600" aria-hidden="true">
 <defs>
@@ -82,13 +110,15 @@ ${[
   .map(([id, a, b, c]) => `<linearGradient id="${id}" x1="0" y1="1" x2="0" y2="0"><stop stop-color="${a}"/><stop offset=".55" stop-color="${b}"/><stop offset="1" stop-color="${c}"/></linearGradient>`)
   .join('')}
 <linearGradient id="rleaf" x1="0" x2="1"><stop stop-color="#5f7f55"/><stop offset="1" stop-color="#9ab38a"/></linearGradient>
-<radialGradient id="rheart" cx=".5" cy=".5" r=".5"><stop stop-color="#fff6d6"/><stop offset=".45" stop-color="#f7d27a"/><stop offset="1" stop-color="#f7d27a" stop-opacity="0"/></radialGradient>
+<radialGradient id="rheart" cx=".5" cy=".5" r=".5"><stop stop-color="#fff8e4" stop-opacity=".7"/><stop offset=".4" stop-color="#f9dc93" stop-opacity=".3"/><stop offset="1" stop-color="#f7d27a" stop-opacity="0"/></radialGradient>
+<radialGradient id="rwell" cx=".5" cy=".5" r=".5"><stop stop-color="#9c4b56"/><stop offset=".55" stop-color="#c06f76" stop-opacity=".85"/><stop offset="1" stop-color="#d98d90" stop-opacity="0"/></radialGradient>
+<linearGradient id="rcup" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f7d6d1"/><stop offset=".5" stop-color="#e3a3a2"/><stop offset="1" stop-color="#b9666f"/></linearGradient>
 </defs>
 <g class="rose-zoom">
 <g class="rose-leaves">${leaves}</g>
 <g class="rose-sepals">${sepals}</g>
-<g class="rose-petals">${petals}</g>
-<g class="rose-heart"><circle cx="${C}" cy="${C}" r="34" fill="url(#rheart)"/>${stamens}</g>
+<g class="rose-petals">${petals}${core}</g>
+<g class="rose-heart"><circle cx="${C}" cy="${C}" r="26" fill="url(#rheart)"/></g>
 </g>
 </svg>`
 }
