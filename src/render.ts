@@ -119,6 +119,11 @@ ${config.schedule
       <time class="reveal">${fmtTime(eventStart(s))}</time>
       <h3 class="reveal">${esc(s.title)}</h3>
       ${s.note ? `<p class="reveal">${esc(s.note)}</p>` : ''}
+      ${
+        s.attire
+          ? `<p class="ev-attire reveal"><span class="ev-attire-k">Attire</span><span class="ev-attire-v">${esc(s.attire.label)}</span><span class="ev-dots" aria-hidden="true">${s.attire.colors.map((c) => `<i style="background:${c}"></i>`).join('')}</span></p>`
+          : ''
+      }
     </div>
   </div>
 </section>`,

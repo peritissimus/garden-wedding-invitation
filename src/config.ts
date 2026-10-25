@@ -13,6 +13,8 @@ export interface ScheduleItem {
   note?: string
   /** Optional; otherwise picked from the title (wedding → rings, sangeet → music…). */
   icon?: IconName
+  /** What to wear, shown on the event's card: a short dress code and a few colours to suggest it. */
+  attire?: { label: string; colors: string[] }
 }
 
 export interface WeddingConfig {
@@ -48,9 +50,9 @@ export const config: WeddingConfig = {
     mapQuery: 'Agra, India',
   },
   schedule: [
-    { title: 'Haldi', date: '2026-11-23', time: '10:30', durationHours: 3, note: 'Come in your brightest, most colourful ethnics!' },
-    { title: 'Sangeet', date: '2026-11-23', time: '19:00', durationHours: 4, note: 'Bring your Bollywood energy, killer moves and most extraaaa outfits!' },
-    { title: 'Wedding', date: '2026-11-24', time: '12:00', durationHours: 4, note: 'Pretty pastels and your best ethnic fits!' },
+    { title: 'Haldi', date: '2026-11-23', time: '10:30', durationHours: 3, note: 'Come in your brightest, most colourful ethnics!', attire: { label: 'Bright, colourful ethnics', colors: ['#f6c22e', '#f08a24', '#e8508a', '#3f9a62'] } },
+    { title: 'Sangeet', date: '2026-11-23', time: '19:00', durationHours: 4, note: 'Bring your Bollywood energy, killer moves and most extraaaa outfits!', attire: { label: 'Glam & extraaaa', colors: ['#d4a537', '#b8296e', '#2f3f9e', '#c9ced6'] } },
+    { title: 'Wedding', date: '2026-11-24', time: '12:00', durationHours: 4, note: 'Pretty pastels and your best ethnic fits!', attire: { label: 'Pretty pastels', colors: ['#f2c9d1', '#cbe6d6', '#dccff0', '#c9dcef', '#f7d5c0'] } },
   ],
   mainEvent: 2,
   dressCode: {

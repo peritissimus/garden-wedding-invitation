@@ -349,6 +349,12 @@ main { position: relative; z-index: 1; }
 .ev-text time { display: block; font: 300 40px/1.1 var(--serif); color: var(--t-ink); }
 .ev-text h3 { margin: 6px 0 4px; font: 400 11px/1.6 var(--sans); letter-spacing: 0.3em; text-transform: uppercase; color: var(--t-soft); }
 .ev-text p { margin: 0; font-size: 19px; font-style: italic; line-height: 1.5; color: var(--t-body); }
+/* what to wear, under each moment: a label, the dress code and a few colours */
+.ev-text .ev-attire { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); font-style: normal; }
+.ev-attire-k { font: 400 10px/1.6 var(--sans); letter-spacing: 0.26em; text-transform: uppercase; color: var(--t-soft); }
+.ev-attire-v { font: 500 16px/1.3 var(--serif); color: var(--t-ink); }
+.ev-dots { display: inline-flex; gap: 4px; }
+.ev-dots i { width: 13px; height: 13px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / 0.7), 0 1px 3px rgb(60 40 30 / 0.2); }
 @media (min-width: 1000px) {
   .event:nth-of-type(odd) { justify-items: start; padding-left: 8vw; }
   .event:nth-of-type(even) { justify-items: end; padding-right: 8vw; }
