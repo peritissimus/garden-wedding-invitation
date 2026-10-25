@@ -13,6 +13,8 @@ export interface ScheduleItem {
   note?: string
   /** Optional; otherwise picked from the title (wedding → rings, sangeet → music…). */
   icon?: IconName
+  /** Where it is: the name of one of `venues`. */
+  venue?: string
   /** What to wear, shown on the event's card: a short dress code and a few colours to suggest it. */
   attire?: { label: string; colors: string[] }
 }
@@ -26,6 +28,8 @@ export interface WeddingConfig {
   hostLine: string
   message: string
   venue: { name: string; address?: string; mapQuery?: string; note?: string }
+  /** The venues the celebrations are held at; each event names its own. */
+  venues: { name: string; area: string; mapQuery: string }[]
   schedule: ScheduleItem[]
   /** Index into `schedule` of the main event: the countdown and "Save the date" point to it. */
   mainEvent: number
@@ -42,17 +46,21 @@ export const config: WeddingConfig = {
   partnerTwo: 'Kushal',
   timeZone: 'Asia/Kolkata',
   utcOffset: '+05:30',
-  hostLine: 'And it’s finally happening!',
-  message: 'The countdown to two days of love, laughter, dancing and all things shaadi begins!',
+  hostLine: 'With full hearts',
+  message: 'Two days of love, laughter and a little shaadi magic. It would mean the world to celebrate with you.',
   venue: {
     name: 'Agra',
     address: 'India',
     mapQuery: 'Agra, India',
   },
+  venues: [
+    { name: 'SNJ Gold Convention Center', area: 'Agra', mapQuery: 'SNJ Gold Convention Center Agra' },
+    { name: 'Taj Khema', area: 'Agra', mapQuery: 'Taj Khema Agra' },
+  ],
   schedule: [
-    { title: 'Haldi', date: '2026-11-23', time: '10:30', durationHours: 3, note: 'Come in your brightest, most colourful ethnics!', attire: { label: 'Bright, colourful ethnics', colors: ['#f6c22e', '#f08a24', '#e8508a', '#3f9a62'] } },
-    { title: 'Sangeet', date: '2026-11-23', time: '19:00', durationHours: 4, note: 'Bring your Bollywood energy, killer moves and most extraaaa outfits!', attire: { label: 'Glam & extraaaa', colors: ['#d4a537', '#b8296e', '#2f3f9e', '#c9ced6'] } },
-    { title: 'Wedding', date: '2026-11-24', time: '12:00', durationHours: 4, note: 'Pretty pastels and your best ethnic fits!', attire: { label: 'Pretty pastels', colors: ['#f2c9d1', '#cbe6d6', '#dccff0', '#c9dcef', '#f7d5c0'] } },
+    { title: 'Haldi', venue: 'SNJ Gold Convention Center', date: '2026-11-23', time: '10:30', durationHours: 3, note: 'A morning of colour, sunshine and new beginnings.', attire: { label: 'Bright, colourful ethnics', colors: ['#f6c22e', '#f08a24', '#e8508a', '#3f9a62'] } },
+    { title: 'Sangeet', venue: 'SNJ Gold Convention Center', date: '2026-11-23', time: '19:00', durationHours: 4, note: 'An evening of music, dancing and a little Bollywood magic.', attire: { label: 'Festive glamour', colors: ['#d4a537', '#b8296e', '#2f3f9e', '#c9ced6'] } },
+    { title: 'Wedding', venue: 'Taj Khema', date: '2026-11-24', time: '12:00', durationHours: 4, note: 'The beginning of our forever, with you by our side.', attire: { label: 'Pretty pastels', colors: ['#f2c9d1', '#cbe6d6', '#dccff0', '#c9dcef', '#f7d5c0'] } },
   ],
   mainEvent: 2,
   dressCode: {

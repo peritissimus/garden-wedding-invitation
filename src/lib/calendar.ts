@@ -1,12 +1,16 @@
 import { config, type ScheduleItem } from '../config'
-import { couple, eventEnd, eventStart, mainEvent } from './format'
+import { couple, eventEnd, eventStart, mainEvent, venueOf } from './format'
 
 /** UTC timestamps (…Z), so each calendar shows the event at the right moment wherever the guest is. */
 const stamp = (d: Date) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
 const icsEscape = (s: string) => s.replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;')
 /** iCalendar lines are folded so none runs past 75 bytes. */
 const fold = (line: string) => (line.match(/.{1,60}/gu) ?? ['']).join('\r\n ')
-const where = () => [config.venue.name, config.venue.address].filter(Boolean).join(', ')
+/** Each celebration's own venue, or the city when it has none. */
+const where = (s?: ScheduleItem) => {
+  const v = s && venueOf(s)
+  return v ? `${v.name}, ${v.area}` : [config.venue.name, config.venue.address].filter(Boolean).join(', ')
+}
 const title = (s: ScheduleItem) => `${s.title} — ${couple()}`
 
 /** One .ics file with every celebration in it. */
@@ -19,7 +23,7 @@ export function downloadIcs() {
     `DTSTART:${stamp(eventStart(s))}`,
     `DTEND:${stamp(eventEnd(s))}`,
     `SUMMARY:${icsEscape(title(s))}`,
-    `LOCATION:${icsEscape(where())}`,
+    `LOCATION:${icsEscape(where(s))}`,
     ...(s.note ? [`DESCRIPTION:${icsEscape(s.note)}`] : []),
     'END:VEVENT',
   ])
@@ -38,7 +42,7 @@ export function googleCalendarUrl() {
     action: 'TEMPLATE',
     text: title(s),
     dates: `${stamp(eventStart(s))}/${stamp(eventEnd(s))}`,
-    location: where(),
+    location: where(s),
     details: s.note ?? '',
   })
   return `https://calendar.google.com/calendar/render?${p}`

@@ -1,6 +1,5 @@
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import './ease'
 import { setupDay } from './day'
 import { heroTimeline, prepareHero } from './hero'
 import { setupIntro } from './intro'
@@ -22,13 +21,15 @@ export function setupAnimations() {
   if ('scrollRestoration' in history) history.scrollRestoration = 'manual'
   window.scrollTo(0, 0)
 
-  // Native scrolling: no smooth-scroll library re-timing the guest's own input.
+  // Native scrolling is the shared playhead for the opening, scenery and details.
+  ScrollTrigger.config({ ignoreMobileResize: true })
   if (!reduced) livePetals()
 
   prepareHero(reduced)
+  const opening = setupIntro({ reduced, hero: () => heroTimeline(reduced) })
+  setupDay(document.getElementById('stage')!, reduced, () => opening.end)
   setupSections(reduced)
-  setupDay(document.getElementById('stage')!, reduced)
-  setupIntro({ reduced, hero: () => heroTimeline(reduced) })
+  ScrollTrigger.refresh()
 
   document.fonts?.ready.then(() => ScrollTrigger.refresh())
   if (import.meta.env.DEV) Object.assign(window, { gsap, ScrollTrigger })

@@ -47,3 +47,7 @@ export const esc = (s: string) =>
 
 export const initials = () => `${config.partnerOne[0] ?? ''}${config.partnerTwo[0] ?? ''}`
 export const couple = () => `${config.partnerOne} & ${config.partnerTwo}`
+
+/** The venue an event is held at, if it names one. */
+export const venueOf = (s: ScheduleItem) => config.venues.find((v) => v.name === s.venue)
+export const mapLink = (query: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`

@@ -50,7 +50,7 @@ src/
   config.ts              # all invitation content
   render.ts              # page markup
   stage.ts               # paints the garden once into canvases; scrolling then only
-                         # moves and fades them (plus a tiny sky and the lights)
+                         # moves and fades them (only the tiny sky strip is redrawn)
   main.ts                # entry: countdown, calendar, RSVP wiring
   art/                   # hand-built SVG artwork (no image files)
     rose.ts              # the rosebud that blooms (five rings of petals)
@@ -60,7 +60,6 @@ src/
     ornaments.ts         # wreath, flourish, mandap drawing, icons, swatches, petals
     defs.ts              # shared gradients + watercolour filters
   animations/
-    ease.ts              # Emil Kowalski's custom curves (CustomEase)
     intro.ts             # tap-or-scroll bloom and dive into the light
     day.ts               # scroll-driven time of day: sky, sun/moon, light and
                          # warm/moonlit cross-fades (transform and opacity only)
@@ -72,32 +71,39 @@ src/
 
 ## Motion
 
-Timings follow Emil Kowalski's design-engineering guidelines:
+- Native scrolling is the shared playhead. There is no scroll lock, wheel interception,
+  smooth-scroll library or delayed scrub. The rose, names, garden, text and botanical
+  drawings advance with scroll distance, stop with the guest and reverse on the way back.
+- The opening holds the hero for 1.4 viewport heights while the bud blooms and the light
+  gives way to the garden. Tap the rose to scroll through that same sequence; any fresh
+  wheel, touch, pointer or keyboard input interrupts the automatic travel immediately.
+- Cards move continuously with the document. Paper surfaces use a warm translucent
+  gradient and layered shadows instead of live backdrop blur over the moving scenery.
+- The garden's light and camera blend continuously between each celebration's real time
+  of day. A new day passes through dawn; daytime weddings end in daylight.
+- Text settles over a short scroll distance and is fully visible before its card reaches
+  the reading position. Botanical strokes, event icons and the closing names share the
+  same reversible scroll treatment. Night endings gather the fireflies and draw shooting
+  stars according to scroll distance as well.
+- Scenery and lighting are painted into canvases once, at up to 2× pixel density
+  (1.5× for coarse pointers to reduce phone memory use). Scrolling moves and fades
+  those bitmaps; only the tiny sky gradient changes pixels. Colour grading yields
+  between short batches so startup work does not monopolise the main thread.
+- Ambient clouds, butterflies, birds, petals and twinkling lights retain their gentle
+  natural movement. Pointer parallax is limited to precise desktop pointers and settles
+  back to centre when the pointer leaves.
+- Buttons respond at once with a 0.96 press scale. Hover effects require a fine pointer.
+- Reduced motion keeps all reading content and decorative drawings visible, shortens
+  the opening to an opacity dissolve and holds the garden camera still. Animated
+  decorations and CSS motion are disabled.
+- Opening scroll distance lives in `src/animations/tempo.ts`.
 
-- Entrances use a strong ease-out (`cubic-bezier(.23, 1, .32, 1)`), movement on
-  screen uses ease-in-out; no `ease-in` anywhere. The dive into the rose eases
-  the zoom's logarithm, so it glides evenly instead of lurching at the end.
-- Nothing grows from nothing: entrances start at 0.6–0.95 scale with opacity.
-  Exits are quicker than entrances (the light clearing, the fireflies drifting
-  off).
-- The opening is a once-per-visit ceremony (~3.8 s) and always interruptible:
-  a fresh scroll, swipe, tap or key eases it up to 4× speed. Returning guests
-  get the same bloom at 2.2× (~1.8 s). Pressing the rose gives way at once
-  (`scale(.97)`), and tapping it never snaps its breathing pose.
-- Calm reading: cards are always there (never popped in), keep one warm paper
-  look all day and night, and hold still while the garden changes behind them.
-  On desktops text settles in over 300 ms as it comes on screen; on touch
-  screens, where a flick outruns any fade, text and numbers are simply shown.
-- Only the garden's time of day is scroll-scrubbed. Each change of light eases
-  in and out between two cards, so the garden is all but still while you read,
-  and it moves with your finger — no trailing catch-up (a mouse wheel's notches
-  get a 0.2s blend).
-- The garden is painted once into canvases (at most 2× pixel density), so
-  scrolling only moves and fades bitmaps — no repainting, even on phones.
-- Buttons press to `scale(.97)`; hover effects are gated behind
-  `(hover: hover) and (pointer: fine)`.
-- Petals, butterflies, clouds and fireflies are CSS-only (transform + opacity).
-- Native scrolling (no smooth-scroll library).
-- Pacing lives in `src/animations/tempo.ts` (`opening` and `reveal`; higher = slower).
-- `prefers-reduced-motion`: opacity fades only; the camera holds still while the
-  light still changes, and decorations that only make sense moving are left out.
+## Phone layout checks
+
+Checked in the in-app browser at 320×568, 360×640, 390×844, 430×932 and
+844×390: forward and reverse scrolling, opening interruption, readable cards,
+calendar controls, day/night lighting, and rotation between portrait and landscape.
+The opening uses stable viewport units so collapsing mobile browser bars do not
+re-centre the rose; venue artwork stays within its card and landscape spacing
+respects device safe areas. Physical-device touch inertia and frame rates still
+need checking on iOS Safari and Android Chrome.

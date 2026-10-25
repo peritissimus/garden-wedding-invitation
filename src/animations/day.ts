@@ -10,8 +10,8 @@ import { mountStage, type Layout, type Sky } from '../stage'
  *
  * The scenery is painted once into canvases (stage.ts), so scrolling only
  * moves and fades them — transforms and opacity, which the GPU composites
- * without repainting anything. The sky gradient and the lights are the only
- * things redrawn, and both are tiny.
+ * without repainting the scenery or the lights. Only a tiny sky gradient
+ * changes pixels during scrolling.
  */
 interface Moment {
   sky: [string, string, string]
@@ -165,8 +165,8 @@ function targets(stage: HTMLElement) {
   const q = (s: string) => stage.querySelector<HTMLElement>(s)!
   const qa = (s: string) => [...stage.querySelectorAll<HTMLElement>(s)]
   return {
-    /** sky colours and lights, drawn onto canvases by the stage; `night` sets the cards' theme */
-    paint: { skyTop: '', skyMid: '', skyBottom: '', lights: 0, night: 0 } as Sky & { night: number },
+    /** Only sky colours are repainted; scenery and lights are composited layers. */
+    paint: { skyTop: '', skyMid: '', skyBottom: '', night: 0 } as Sky & { night: number },
     stars: q('.stars'),
     sun: q('.sun'),
     sunLooks: qa('.sun .slot'),
@@ -177,6 +177,7 @@ function targets(stage: HTMLElement) {
     butterflies: q('.butterflies'),
     warm: qa('.look.warm'),
     moonlit: qa('.look.moon'),
+    lights: qa('.light-layer'),
     rays: q('.rays'),
     bokeh: q('.bokeh'),
     fireflies: q('.fireflies'),
@@ -196,7 +197,7 @@ function frame(t: Targets, m: Moment, L: Layout) {
   const X = (x: number) => L.ox + x * L.u
   const Y = (y: number) => L.oy + y * L.u
   const out: [gsap.TweenTarget, gsap.TweenVars][] = [
-    [t.paint, { skyTop: m.sky[0], skyMid: m.sky[1], skyBottom: m.sky[2], lights: m.lights, night: m.night }],
+    [t.paint, { skyTop: m.sky[0], skyMid: m.sky[1], skyBottom: m.sky[2], night: m.night }],
     [t.stars, { opacity: m.stars }],
     [t.sun, { x: X(m.sun.x), y: Y(m.sun.y), opacity: m.sun.o }],
     [t.moon, { x: X(m.moon.x), y: Y(m.moon.y), opacity: m.moon.o }],
@@ -205,6 +206,7 @@ function frame(t: Targets, m: Moment, L: Layout) {
     [t.butterflies, { opacity: m.birds }],
     [t.warm, { opacity: m.warm }],
     [t.moonlit, { opacity: m.moonMix }],
+    [t.lights, { opacity: m.lights }],
     [t.rays, { x: X(m.sun.x), y: Y(m.sun.y), opacity: m.rays }],
     [t.bokeh, { opacity: m.bokeh }],
     [t.fireflies, { opacity: m.fireflies }],
@@ -225,9 +227,8 @@ function frame(t: Targets, m: Moment, L: Layout) {
  * dawn breaks in between. After the last one the day carries on into the
  * evening, so the fireflies can gather at the RSVP under the stars.
  */
-export function setupDay(el: HTMLElement, reduced: boolean) {
+export function setupDay(el: HTMLElement, reduced: boolean, start: () => number) {
   const root = document.documentElement
-  const touch = matchMedia('(pointer: coarse)').matches
   const stage = mountStage(el)
   const t = targets(el)
   const place = () => {
@@ -235,15 +236,25 @@ export function setupDay(el: HTMLElement, reduced: boolean) {
     for (const [cam] of t.cams) gsap.set(cam, { transformOrigin: `50% ${L.h - 240 * L.u}px` })
     return L
   }
-  /** Each frame: the sky and lights; after dark the stars and fairy lights twinkle and the fireflies wake. */
+  /** Update the tiny sky strip; after dark the ambient lights and fireflies wake. */
   const paint = () => {
     stage.update(t.paint)
     root.classList.toggle('is-dusk', t.paint.night > 0.4)
     root.classList.toggle('is-night', t.paint.night > 0.75)
   }
-  /** How far down the hero's text reaches, scroll prompt included (it sits at the top of the page). */
-  const heroText = () =>
-    Math.max(0, ...['.hero .date-block', '.hero .scroll-cue'].map((s) => document.querySelector(s)?.getBoundingClientRect().bottom ?? 0)) + scrollY
+  /** Measure layout offsets: pin transforms and an in-progress text reveal must not move the camera. */
+  const heroText = () => {
+    const section = document.getElementById('hero')!
+    return Math.max(0, ...['.date-block', '.scroll-cue'].map((selector) => {
+      let el = section.querySelector<HTMLElement>(selector)
+      let bottom = el?.offsetHeight ?? 0
+      while (el && el !== section) {
+        bottom += el.offsetTop
+        el = el.offsetParent as HTMLElement | null
+      }
+      return bottom
+    }))
+  }
   const setHero = (L: Layout) => {
     hero = heroFor(L, heroText())
     for (const [target, vars] of frame(t, hero, L)) gsap.set(target, vars)
@@ -291,23 +302,18 @@ export function setupDay(el: HTMLElement, reduced: boolean) {
     stops.splice(i, 0, ...between.map(({ t, m }) => ({ at: { a, b, t }, m })))
   }
 
-  let trigger: ScrollTrigger | null = null
-  const build = () => {
-    const progress = trigger?.progress ?? 0
-    trigger?.kill()
+  const tl = gsap.timeline({ paused: true, defaults: { ease: 'none' }, onUpdate: paint })
+  const build = (trigger: ScrollTrigger) => {
     const L = place()
-    const max = Math.max(1, root.scrollHeight - innerHeight)
+    const max = Math.max(1, trigger.end - trigger.start)
     const centre = (el: HTMLElement) => {
       const top = el.getBoundingClientRect().top + scrollY
-      return Math.min(1, Math.max(0, (top + el.offsetHeight / 2 - innerHeight / 2) / max))
+      return Math.min(1, Math.max(0, (top + el.offsetHeight / 2 - innerHeight / 2 - trigger.start) / max))
     }
     const position = (at: Stop['at']) => (at instanceof HTMLElement ? centre(at) : centre(at!.a) + (centre(at!.b) - centre(at!.a)) * at!.t)
-    // each change of light eases in and out between two cards, so the garden is
-    // all but still while you read one and moves while you scroll to the next
-    const tl = gsap.timeline({ paused: true, defaults: { ease: 'sine.inOut' }, onUpdate: paint })
-    if (!progress) setHero(L)
+    tl.clear()
+    setHero(L)
     let t0 = 0
-    hero = heroFor(L, heroText())
     let from = hero
     for (const { at: where, m: to } of stops) {
       if (!where) continue
@@ -321,21 +327,15 @@ export function setupDay(el: HTMLElement, reduced: boolean) {
       from = to
     }
     if (t0 < 1) tl.to({}, { duration: 1 - t0 }, t0)
-    tl.progress(progress)
-    // the light moves with your finger — no trailing catch-up. Touch scrolling is already
-    // smooth; a mouse wheel's notches get a quick 0.2s blend so the light doesn't step.
-    trigger = ScrollTrigger.create({ animation: tl, start: 0, end: 'max', scrub: reduced || touch ? true : 0.2 })
+    tl.progress(trigger.progress)
+    paint()
   }
-  build()
-  // The stage is sized to the large viewport, so a phone's toolbar sliding
-  // away doesn't resize it; when it is (re)measured — once its styles apply,
-  // or on rotation or a resized window — everything is re-placed.
-  stage.onLayout(() => {
-    build()
-    ScrollTrigger.refresh()
+  ScrollTrigger.create({
+    id: 'garden-day', animation: tl, start, end: 'max', scrub: true,
+    onRefresh: build,
   })
-  document.fonts?.ready.then(build)
-
+  // Refresh after a real stage resize; mobile browser chrome doesn't change its large viewport.
+  stage.onLayout(() => ScrollTrigger.refresh())
 
   // A little pointer parallax on desktop: nearer layers drift more.
   if (!reduced && matchMedia('(hover: hover) and (pointer: fine)').matches) {
@@ -346,6 +346,9 @@ export function setupDay(el: HTMLElement, reduced: boolean) {
         x: gsap.quickTo(el, 'x', { duration: 0.6, ease: 'power3.out' }),
         y: gsap.quickTo(el, 'y', { duration: 0.6, ease: 'power3.out' }),
       }
+    })
+    document.documentElement.addEventListener('pointerleave', () => {
+      for (const l of layers) { l.x(0); l.y(0) }
     })
     addEventListener('pointermove', (e) => {
       const nx = e.clientX / innerWidth - 0.5

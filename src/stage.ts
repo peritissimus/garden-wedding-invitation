@@ -7,9 +7,8 @@ import type { Art, GlowGroup } from './art/scene'
  * Every piece of scenery is painted once — the daylight layers from their
  * SVG, the sunset and moonlit versions by running those pixels through the
  * colour matrices — and from then on scrolling only moves and fades bitmaps,
- * which the GPU does for free. Only two things are ever redrawn, both tiny:
- * the sky gradient (a 1×64 canvas stretched to fill the screen) and the
- * lights, which switch on one by one as the evening comes.
+ * without repainting the artwork. Even the lights are painted once and faded
+ * as a group; only the tiny 1×64 sky gradient is redrawn during scrolling.
  */
 
 /** How the 1600×1000 scene sits on the stage, like SVG's `xMidYMax slice`: scene (x, y) → px (ox + x·u, oy + y·u). */
@@ -32,7 +31,7 @@ interface Glow {
 }
 
 /** Sharp enough on any screen without giving every layer a 3× backing store. */
-const DPR = Math.min(window.devicePixelRatio || 1, 2)
+const DPR = Math.min(window.devicePixelRatio || 1, matchMedia('(pointer: coarse)').matches ? 1.5 : 2)
 /** Ceiling for any one canvas, in device pixels. */
 const MAX_PIXELS = 4e6
 const DEPTHS: Depth[] = ['front', 'back', 'fg']
@@ -116,53 +115,61 @@ const filtered = (a: Paintable, v: Box, m: number[]): Paintable => {
  * maths, on straight (unpremultiplied) sRGB like `color-interpolation-filters="sRGB"`.
  * Returns null if the pixels can't be read.
  */
-function grade(src: HTMLCanvasElement, matrices: number[][], css: string): HTMLCanvasElement[] | null {
+async function grade(src: HTMLCanvasElement, matrices: number[][], css: string, live: () => boolean): Promise<HTMLCanvasElement[] | null> {
   let px: Uint8ClampedArray
   try {
     px = src.getContext('2d', { willReadFrequently: true })!.getImageData(0, 0, src.width, src.height).data
   } catch {
     return null
   }
-  return matrices.map(([rr, rg, rb, , ro, gr, gg, gb, , go, br, bg, bb, , bo]) => {
+  const canvases: HTMLCanvasElement[] = []
+  let yielded = performance.now()
+  for (const [rr, rg, rb, , ro, gr, gg, gb, , go, br, bg, bb, , bo] of matrices) {
     const out = new ImageData(src.width, src.height)
     const d = out.data
     const r0 = ro * 255
     const g0 = go * 255
     const b0 = bo * 255
-    for (let p = 0; p < px.length; p += 4) {
-      const a = px[p + 3]
-      if (!a) continue
-      const r = px[p]
-      const g = px[p + 1]
-      const b = px[p + 2]
-      d[p] = rr * r + rg * g + rb * b + r0
-      d[p + 1] = gr * r + gg * g + gb * b + g0
-      d[p + 2] = br * r + bg * g + bb * b + b0
-      d[p + 3] = a
+    // Keep startup work interruptible while the guest is already opening the rose.
+    for (let start = 0; start < px.length; start += 65_536) {
+      const end = Math.min(px.length, start + 65_536)
+      for (let p = start; p < end; p += 4) {
+        const a = px[p + 3]
+        if (!a) continue
+        const r = px[p]
+        const g = px[p + 1]
+        const b = px[p + 2]
+        d[p] = rr * r + rg * g + rb * b + r0
+        d[p + 1] = gr * r + gg * g + gb * b + g0
+        d[p + 2] = br * r + bg * g + bb * b + b0
+        d[p + 3] = a
+      }
+      if (performance.now() - yielded >= 5) {
+        await breathe()
+        if (!live()) return null
+        yielded = performance.now()
+      }
     }
     const c = document.createElement('canvas')
     c.width = src.width
     c.height = src.height
     c.style.cssText = css
     c.getContext('2d')!.putImageData(out, 0, 0)
-    return c
-  })
+    canvases.push(c)
+  }
+  return canvases
 }
 
-function drawGlow({ el, v, groups }: Glow, lights: number) {
+function drawGlow({ el, v, groups }: Glow) {
   const ctx = el.getContext('2d')!
   ctx.setTransform(1, 0, 0, 1, 0, 0)
   ctx.clearRect(0, 0, el.width, el.height)
-  if (lights <= 0) return
   const kx = el.width / (v[2] - v[0])
   const ky = el.height / (v[3] - v[1])
   ctx.setTransform(kx, 0, 0, ky, -v[0] * kx, -v[1] * ky)
   for (const group of groups) {
-    // each light comes on in turn as `lights` passes its place along the strand
-    const on = Math.min(1, Math.max(0, (lights * 1.5 - group.i) * 2.4))
-    if (!on) continue
     for (const op of group.ops) {
-      ctx.globalAlpha = on * op.a
+      ctx.globalAlpha = op.a
       if (op.k === 'shape') {
         ctx.fillStyle = op.fill
         ctx.fill(path(op.d))
@@ -176,7 +183,6 @@ export interface Sky {
   skyTop: string
   skyMid: string
   skyBottom: string
-  lights: number
 }
 
 export function mountStage(root: HTMLElement) {
@@ -194,9 +200,6 @@ export function mountStage(root: HTMLElement) {
 
   let L = measure(root)
   let generation = 0
-  let glows: Glow[] = []
-  let lights = 0
-  let lightsDrawn = -1
   let skyDrawn = ''
 
   /** The part of `box` that can be on screen — with room for the camera's moves and the pointer parallax when `roomy`. */
@@ -264,12 +267,6 @@ export function mountStage(root: HTMLElement) {
     ctx.fillRect(-1, -1, 2, 2)
   }
 
-  function drawLights() {
-    if (lights === lightsDrawn) return
-    lightsDrawn = lights
-    for (const g of glows) drawGlow(g, lights)
-  }
-
   async function paint() {
     const gen = ++generation
     const live = () => gen === generation
@@ -323,7 +320,8 @@ export function mountStage(root: HTMLElement) {
       if (!v) return
       const kind = d === 'back' ? 'far' : 'near'
       const ms = [scene.LOOKS.warm[kind], scene.LOOKS.moon[kind]]
-      const graded = day && grade(day.scratch, ms, day.css)
+      const graded = day && await grade(day.scratch, ms, day.css, live)
+      if (!live()) return
       if (day) {
         day.scratch.width = day.scratch.height = 0 // let the scratch copy go now
         delete days[d]
@@ -361,7 +359,7 @@ export function mountStage(root: HTMLElement) {
       () => {
         if (!live()) return
         const sets = more().lights
-        glows = [
+        const glows = [
           glow('.cam-back .glow:not(.fairy)', [-40, 400, 1640, 700], sets.back),
           glow('.cam-back .fairy.f0', scene.TREE_LIGHT_BOX, [sets.trees[0]]),
           glow('.cam-back .fairy.f1', scene.TREE_LIGHT_BOX, [sets.trees[1]]),
@@ -369,8 +367,7 @@ export function mountStage(root: HTMLElement) {
           glow('.cam-front .fairy.f0', scene.FAIRY_BOX, [sets.fairies[0]]),
           glow('.cam-front .fairy.f1', scene.FAIRY_BOX, [sets.fairies[1]]),
         ].filter((g): g is Glow => !!g)
-        lightsDrawn = -1
-        drawLights()
+        glows.forEach(drawGlow)
       },
       centred('.moon .slot', scene.moon(), 1.5),
       ...[0, 1, 2].map((i) => () => sheet(`.stars .st-${i}`, more().stars[i], Math.min(DPR, 1.5))()),
@@ -418,11 +415,9 @@ export function mountStage(root: HTMLElement) {
     onLayout(f: (L: Layout) => void) {
       listeners.push(f)
     },
-    /** Called every frame the day moves: redraws the sky and the lights if they changed. */
+    /** Only the tiny sky strip changes pixels while scrolling. */
     update(s: Sky) {
       drawSky(s.skyTop, s.skyMid, s.skyBottom)
-      lights = Math.round(s.lights * 400) / 400
-      drawLights()
     },
     /** Re-measure; if the stage changed size, repaint everything for the new size. */
     refit: () => relayout(),

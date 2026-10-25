@@ -1,13 +1,11 @@
 import { config } from './config'
-import { couple, dateRange, dayOf, days, esc, eventStart, fmtDay, fmtTime, fmtWeekday, mainEvent, monthOf, weekdayOf, whatWhen, yearOf } from './lib/format'
+import { couple, dateRange, dayOf, days, esc, eventStart, fmtDay, fmtTime, fmtWeekday, mainEvent, monthOf, weekdayOf, whatWhen, yearOf, mapLink, venueOf } from './lib/format'
 import { sharedDefs } from './art/defs'
 import { circleMark, flourish, icon, petals, rsvpArt, venueArt, wreath } from './art/ornaments'
 import { rose } from './art/rose'
 import { birds, butterflies, fireflies } from './art/scene'
 
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
-
-const NUMBERS = ['One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven']
 
 export function render(root: HTMLElement) {
   const main = mainEvent()
@@ -29,6 +27,7 @@ export function render(root: HTMLElement) {
   const mapQuery = config.venue.mapQuery ?? [config.venue.name, config.venue.address].filter(Boolean).join(' ')
   // each depth of the garden in daylight, sunset and moonlight (painted by stage.ts)
   const looks = '<div class="slot look day"></div><div class="slot look warm"></div><div class="slot look moon"></div>'
+  const lighting = '<div class="light-layer"><div class="slot glow"></div><div class="slot glow fairy f0"></div><div class="slot glow fairy f1"></div></div>'
 
   root.innerHTML = `${sharedDefs}
 <div class="stage" id="stage" aria-hidden="true">
@@ -38,8 +37,8 @@ export function render(root: HTMLElement) {
   <div class="moon"><div class="slot"></div></div>
   <div class="clouds"><div class="cloud-band"><div class="slot day"></div><div class="slot golden"></div><div class="slot sunset"></div><div class="slot dusk"></div><div class="slot night"></div></div></div>
   <div class="birds">${birds()}</div>
-  <div class="px" data-depth="6"><div class="cam cam-back">${looks}<div class="slot glow"></div><div class="slot glow fairy f0"></div><div class="slot glow fairy f1"></div></div></div>
-  <div class="px" data-depth="14"><div class="cam cam-front">${looks}<div class="slot glow"></div><div class="slot glow fairy f0"></div><div class="slot glow fairy f1"></div><div class="butterflies">${butterflies()}</div></div></div>
+  <div class="px" data-depth="6"><div class="cam cam-back">${looks}${lighting}</div></div>
+  <div class="px" data-depth="14"><div class="cam cam-front">${looks}${lighting}<div class="butterflies">${butterflies()}</div></div></div>
   <div class="px" data-depth="30"><div class="cam cam-fg">${looks}</div></div>
   <div class="rays"><div class="slot"></div></div>
   <div class="bokeh"><div class="slot"></div></div>
@@ -58,7 +57,7 @@ export function render(root: HTMLElement) {
   </div>
   <div class="intro-copy">
     <p class="to">You are warmly invited</p>
-    <p class="eyebrow hint"><span>Tap the rose</span><i></i><span>or scroll</span></p>
+    <span class="intro-rule" aria-hidden="true"></span>
   </div>
 </div>
 
@@ -75,7 +74,7 @@ export function render(root: HTMLElement) {
     <div class="date-block h-in h-late">
       <span>${esc(dateBlock[0])}</span><span class="big">${esc(dateBlock[1])}</span><span>${esc(dateBlock[2])}</span>
     </div>
-    <p class="scroll-cue h-in h-late"><span>Scroll to spend ${many ? 'both days' : 'the day'} with us</span><i></i></p>
+    <div class="scroll-cue h-in h-late" aria-hidden="true"><i></i></div>
   </div>
 </section>
 
@@ -101,14 +100,6 @@ export function render(root: HTMLElement) {
   </div>
 </section>
 
-<section class="beat beat-short" id="schedule">
-  <div class="card card-slim">
-    <p class="eyebrow reveal">${many ? 'The celebrations' : 'Order of the day'}</p>
-    <h2 class="reveal"><em>${many ? `${NUMBERS[all.length - 1] ?? all.length} days of festivities` : 'The celebration'}</em></h2>
-    <p class="reveal small">Keep scrolling — the ${many ? 'days unfold' : 'day unfolds'} around you.</p>
-  </div>
-</section>
-
 ${config.schedule
   .map(
     (s) => `<section class="beat event" id="ev-${slug(s.title)}" data-date="${s.date}" data-time="${s.time}">
@@ -118,6 +109,12 @@ ${config.schedule
       ${many ? `<p class="ev-day reveal">${esc(fmtWeekday(s.date))}</p>` : ''}
       <time class="reveal">${fmtTime(eventStart(s))}</time>
       <h3 class="reveal">${esc(s.title)}</h3>
+      ${(() => {
+        const v = venueOf(s)
+        return v
+          ? `<p class="ev-venue reveal"><a href="${mapLink(v.mapQuery)}" target="_blank" rel="noopener"><svg viewBox="0 0 16 20" aria-hidden="true"><path d="M8 19s6-6.2 6-11A6 6 0 0 0 2 8c0 4.8 6 11 6 11Z"/><circle cx="8" cy="8" r="2.2"/></svg><span>${esc(v.name)}, ${esc(v.area)}</span></a></p>`
+          : ''
+      })()}
       ${s.note ? `<p class="reveal">${esc(s.note)}</p>` : ''}
       ${
         s.attire
@@ -132,12 +129,25 @@ ${config.schedule
 
 <section class="beat" id="venue">
   <div class="card">
-    <p class="eyebrow reveal">Where</p>
+    <p class="eyebrow reveal">The setting</p>
     ${venueArt()}
-    <h2 class="reveal venue-name">${esc(config.venue.name)}</h2>
+    ${
+      config.venues.length
+        ? config.venues
+            .map((v) => {
+              const held = config.schedule.filter((s) => s.venue === v.name).map((s) => s.title)
+              return `<div class="venue-item">
+      <p class="eyebrow reveal">${esc(held.join(' & '))}</p>
+      <h2 class="reveal venue-name">${esc(v.name)}</h2>
+      <p class="reveal muted italic">${esc(v.area)}</p>
+      <div class="reveal actions"><a class="btn" target="_blank" rel="noopener" href="${mapLink(v.mapQuery)}">View on map</a></div>
+    </div>`
+            })
+            .join('')
+        : `<h2 class="reveal venue-name">${esc(config.venue.name)}</h2>
     ${config.venue.address ? `<p class="reveal muted italic">${esc(config.venue.address)}</p>` : ''}
-    ${config.venue.note ? `<p class="reveal small">${esc(config.venue.note)}</p>` : ''}
-    <div class="reveal actions"><a class="btn" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}">View on map</a></div>
+    <div class="reveal actions"><a class="btn" target="_blank" rel="noopener" href="${mapLink(mapQuery)}">View on map</a></div>`
+    }
   </div>
 </section>
 
