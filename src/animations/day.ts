@@ -271,7 +271,6 @@ export function setupDay(el: HTMLElement, reduced: boolean) {
   const last = EVENING.indexOf(stops[stops.length - 1].m)
   stops.push(
     { at: byId('venue'), m: EVENING[Math.min(last + 1, 4)] },
-    { at: byId('attire'), m: EVENING[Math.min(last + 2, 4)] },
     { at: byId('rsvp'), m: NIGHT },
     { at: byId('footer'), m: NIGHT },
   )

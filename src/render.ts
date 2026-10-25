@@ -1,7 +1,7 @@
 import { config } from './config'
 import { couple, dateRange, dayOf, days, esc, eventStart, fmtDay, fmtTime, fmtWeekday, mainEvent, monthOf, weekdayOf, whatWhen, yearOf } from './lib/format'
 import { sharedDefs } from './art/defs'
-import { circleMark, flourish, icon, petals, rsvpArt, swatch, venueArt, wreath } from './art/ornaments'
+import { circleMark, flourish, icon, petals, rsvpArt, venueArt, wreath } from './art/ornaments'
 import { rose } from './art/rose'
 import { birds, butterflies, fireflies } from './art/scene'
 
@@ -138,17 +138,6 @@ ${config.schedule
     ${config.venue.address ? `<p class="reveal muted italic">${esc(config.venue.address)}</p>` : ''}
     ${config.venue.note ? `<p class="reveal small">${esc(config.venue.note)}</p>` : ''}
     <div class="reveal actions"><a class="btn" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}">View on map</a></div>
-  </div>
-</section>
-
-<section class="beat" id="attire">
-  <div class="card">
-    <p class="eyebrow reveal">Attire</p>
-    <h2 class="reveal"><em>${esc(config.dressCode.title)}</em></h2>
-    <p class="reveal">${esc(config.dressCode.description)}</p>
-    <ul class="palette" aria-label="Suggested colours">${config.dressCode.palette
-      .map((p, i) => `<li class="chip">${swatch(p.color, i)}<span>${esc(p.name)}</span></li>`)
-      .join('')}</ul>
   </div>
 </section>
 

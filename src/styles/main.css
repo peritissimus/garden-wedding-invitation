@@ -343,18 +343,18 @@ main { position: relative; z-index: 1; }
 
 /* Order of the day: each moment is its own small card, alternating sides
    on wide screens so the arch stays in view */
-.event-card { display: grid; grid-template-columns: 64px 1fr; align-items: center; gap: 22px; width: min(440px, 100%); padding: 30px 34px; text-align: left; }
+.event-card { display: grid; grid-template-columns: 64px 1fr; align-items: center; gap: 22px; width: min(520px, 100%); padding: 34px 34px; text-align: left; }
 .t-icon { width: 58px; height: 58px; overflow: visible; fill: none; stroke: var(--t-gold); stroke-width: 1.1; stroke-linecap: round; stroke-linejoin: round; }
-.ev-text .ev-day { margin: 0 0 2px; font: 400 10px/1.6 var(--sans); letter-spacing: 0.24em; text-transform: uppercase; font-style: normal; color: var(--t-soft); }
-.ev-text time { display: block; font: 300 40px/1.1 var(--serif); color: var(--t-ink); }
-.ev-text h3 { margin: 6px 0 4px; font: 400 11px/1.6 var(--sans); letter-spacing: 0.3em; text-transform: uppercase; color: var(--t-soft); }
-.ev-text p { margin: 0; font-size: 19px; font-style: italic; line-height: 1.5; color: var(--t-body); }
+.ev-text .ev-day { margin: 0 0 2px; font: 500 12px/1.6 var(--sans); letter-spacing: 0.2em; text-transform: uppercase; font-style: normal; color: var(--t-soft); }
+.ev-text time { display: block; font: 400 44px/1.1 var(--serif); color: var(--t-ink); }
+.ev-text h3 { margin: 6px 0 6px; font: 500 15px/1.5 var(--sans); letter-spacing: 0.26em; text-transform: uppercase; color: var(--t-accent); }
+.ev-text p { margin: 0; font-size: 21px; font-style: italic; line-height: 1.45; color: var(--t-body); }
 /* what to wear, under each moment: a label, the dress code and a few colours */
 .ev-text .ev-attire { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); font-style: normal; }
-.ev-attire-k { font: 400 10px/1.6 var(--sans); letter-spacing: 0.26em; text-transform: uppercase; color: var(--t-soft); }
-.ev-attire-v { font: 500 16px/1.3 var(--serif); color: var(--t-ink); }
+.ev-attire-k { font: 500 12px/1.6 var(--sans); letter-spacing: 0.2em; text-transform: uppercase; color: var(--t-soft); }
+.ev-attire-v { font: 500 19px/1.3 var(--serif); color: var(--t-ink); }
 .ev-dots { display: inline-flex; gap: 4px; }
-.ev-dots i { width: 13px; height: 13px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / 0.7), 0 1px 3px rgb(60 40 30 / 0.2); }
+.ev-dots i { width: 16px; height: 16px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / 0.7), 0 1px 3px rgb(60 40 30 / 0.2); }
 @media (min-width: 1000px) {
   .event:nth-of-type(odd) { justify-items: start; padding-left: 8vw; }
   .event:nth-of-type(even) { justify-items: end; padding-right: 8vw; }
@@ -405,9 +405,9 @@ main { position: relative; z-index: 1; }
   .beat { padding: 12svh 16px; }
   .beat > .card { top: 12svh; }
   .card { padding: 40px 24px; }
-  .event-card { grid-template-columns: 50px 1fr; gap: 16px; padding: 24px 22px; }
-  .t-icon { width: 48px; height: 48px; }
-  .ev-text time { font-size: 34px; }
+  .event-card { grid-template-columns: 44px 1fr; gap: 14px; padding: 26px 20px; }
+  .t-icon { width: 42px; height: 42px; }
+  .ev-text time { font-size: 40px; }
   .date-block { gap: 12px; font-size: 11px; letter-spacing: 0.2em; }
   .date-block .big { font-size: 38px; padding: 0 14px; }
   p { font-size: 19px; }
