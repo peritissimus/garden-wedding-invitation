@@ -268,12 +268,19 @@ export function setupDay(el: HTMLElement, reduced: boolean) {
     if (prev && prev.dataset.date !== el.dataset.date && stops[stops.length - 1].m.night > 0.3) stops.push({ at: { a: prev, b: el, t: 0.5 }, m: DAWN })
     stops.push({ at: el, m })
   })
-  const last = EVENING.indexOf(stops[stops.length - 1].m)
-  stops.push(
-    { at: byId('venue'), m: EVENING[Math.min(last + 1, 4)] },
-    { at: byId('rsvp'), m: NIGHT },
-    { at: byId('footer'), m: NIGHT },
-  )
+  // The invitation ends in the light of the last celebration: a daytime wedding ends in
+  // the day (no night, fireflies or shooting star); an evening one carries on into the night.
+  const finale = stops[stops.length - 1].m
+  const endsAtNight = finale.night > 0.5
+  root.classList.toggle('ends-day', !endsAtNight)
+  if (endsAtNight) {
+    const last = EVENING.indexOf(finale)
+    stops.push(
+      { at: byId('venue'), m: EVENING[Math.min(last + 1, 4)] },
+      { at: byId('rsvp'), m: NIGHT },
+      { at: byId('footer'), m: NIGHT },
+    )
+  } else stops.push({ at: byId('venue'), m: finale }, { at: byId('rsvp'), m: finale }, { at: byId('footer'), m: finale })
   // Evening never jumps straight from day to night (the halfway mix is a flat grey): it goes
   // through sunset and dusk on the way, however short the scroll between the two.
   for (let i = stops.length - 1; i > 0; i--) {

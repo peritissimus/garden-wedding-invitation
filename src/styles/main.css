@@ -400,6 +400,15 @@ main { position: relative; z-index: 1; }
 .flourish .pop path { fill: #f3d4c6; stroke: #e9c98e; stroke-width: 0.5; }
 .flourish .pop circle { fill: #e9c98e; stroke: none; }
 .sample { color: #c9c2d6; opacity: 0.8; }
+/* a daytime ending: the closing names in ink on the bright garden, not starlight */
+/* no firefly heart to make room for, so the RSVP card sits like the others */
+@media (min-height: 600px) { .ends-day .rsvp { align-items: start; padding-bottom: 14svh; } }
+.ends-day .footer { color: var(--ink); text-shadow: 0 1px 22px #fffaf0, 0 0 8px #fffaf0cc; }
+.ends-day .footer .eyebrow { color: var(--soft); }
+.ends-day .footer-names { color: var(--ink); text-shadow: 0 1px 26px #fffaf0, 0 0 10px #fffaf0cc; }
+.ends-day .flourish { stroke: var(--gold); }
+.ends-day .flourish .pop circle { fill: var(--gold); }
+.ends-day .sample { color: var(--soft); }
 
 @media (max-width: 640px) {
   .beat { padding: 12svh 16px; }

@@ -176,7 +176,17 @@ function heart() {
   }
   // leaving is quicker than gathering: the heart was the moment, drifting off isn't
   const scatter = () => gsap.to(flies, { x: 0, y: 0, duration: 1, ease: 'emilInOut', stagger: 0.006, overwrite: true })
-  ScrollTrigger.create({ trigger: rsvp, start: 'top 60%', end: 'bottom 35%', onEnter: gather, onEnterBack: gather, onLeave: scatter, onLeaveBack: scatter })
+  // only when the invitation ends at night: by day there are no fireflies to gather
+  const night = () => !document.documentElement.classList.contains('ends-day')
+  ScrollTrigger.create({
+    trigger: rsvp,
+    start: 'top 60%',
+    end: 'bottom 35%',
+    onEnter: () => night() && gather(),
+    onEnterBack: () => night() && gather(),
+    onLeave: scatter,
+    onLeaveBack: scatter,
+  })
 }
 
 /** A shooting star crosses the night sky when you reach the end. */
@@ -188,6 +198,7 @@ function shooting() {
     trigger: footer,
     start: 'top 70%',
     onEnter: () => {
+      if (document.documentElement.classList.contains('ends-day')) return // no shooting stars by day
       sky.classList.remove('go')
       void sky.offsetWidth
       sky.classList.add('go')
